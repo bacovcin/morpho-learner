@@ -1,7 +1,7 @@
 #####
 # Feature.py
 # @Kobey Shwayder
-# Contains Phoneme class and phonparse method
+# Contains Phoneme class
 #####
 
 import re
@@ -23,6 +23,31 @@ def FeatureOpposite(val):
     if val == 4: return 3
     else: return None
         
+        
+def FeatureRepr(dict):
+    '''Takes dictionary of feature:value and returns a human readable version'''
+    toReturn = ""
+    keys = dict.keys()
+    keys.sort()
+    for f in keys:
+        if(dict[f] == Feature.Plus):
+            toReturn += "+%s, "%f
+        elif(dict[f] == Feature.Minus):
+            toReturn += "-%s, "%f
+        elif(dict[f] == Feature.Needs):
+            toReturn += "?%s, "%f
+        elif(dict[f] == Feature.Marked):
+            toReturn += "m%s, "%f
+        elif(dict[f] == Feature.Unmarked):
+            toReturn += "u%s, "%f 
+        elif(dict[f] == Feature.Any):
+            toReturn += "@%s, "%f  
+        elif(dict[f] == Feature.NotSpecified):
+            toReturn += "0%s, "%f 
+        else: 
+           raise ValueError("No such feature or value: " + f)
+    return toReturn[:-2]
+
 class Phoneme:
     def __init__(self, quick = None,
                  syll = Feature.NotSpecified,
@@ -124,27 +149,7 @@ class Phoneme:
             self._features['tense'] = Feature.NotSpecified
     def __repr__(self):
         '''string representation'''
-        toReturn = '<Phoneme: '
-        keys = self._features.keys()
-        keys.sort()
-        for f in keys:
-            if(self._features[f] == Feature.Plus):
-                toReturn += "+%s, "%f
-            elif(self._features[f] == Feature.Minus):
-                toReturn += "-%s, "%f
-            elif(self._features[f] == Feature.Needs):
-                toReturn += "?%s, "%f
-            elif(self._features[f] == Feature.Marked):
-                toReturn += "m%s, "%f
-            elif(self._features[f] == Feature.Unmarked):
-                toReturn += "u%s, "%f 
-            elif(self._features[f] == Feature.Any):
-                toReturn += "@%s, "%f  
-            elif(self._features[f] == Feature.NotSpecified):
-                toReturn += "0%s, "%f 
-            else: 
-               raise ValueError("No such feature or value: " + f)
-        return toReturn[:-2] + ">" #remove last comma and space
+        return '<Phoneme: ' + FeatureRepr(self._features) + ">" #remove last comma and space
     def needy(self):
         needs = [feat for feat in self._features.keys()
                  if self._features[feat] == Feature.Needs]

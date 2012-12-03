@@ -7,6 +7,7 @@
 #######
 
 from Util import *
+from Feature import Phoneme
 
 
 def ParseTIPA(string):
@@ -266,4 +267,7 @@ def subset(featurelist, toprint = True):
     else:
         return set
 
-print subset('-cons, +son, +cor')
+
+if __name__ == "__main__":
+    print subset('+lab, -syll')
+    print PhonParse('t')
