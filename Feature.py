@@ -1,7 +1,7 @@
 #####
 # Feature.py
 # @Kobey Shwayder
-# Contains Phoneme class and phonparse method
+# Contains Phoneme class
 #####
 
 import re
@@ -23,24 +23,47 @@ def FeatureOpposite(val):
     if val == 4: return 3
     else: return None
         
+        
+def FeatureRepr(dict):
+    '''Takes dictionary of feature:value and returns a human readable version'''
+    toReturn = ""
+    keys = dict.keys()
+    keys.sort()
+    for f in keys:
+        if(dict[f] == Feature.Plus):
+            toReturn += "+%s, "%f
+        elif(dict[f] == Feature.Minus):
+            toReturn += "-%s, "%f
+        elif(dict[f] == Feature.Needs):
+            toReturn += "?%s, "%f
+        elif(dict[f] == Feature.Marked):
+            toReturn += "m%s, "%f
+        elif(dict[f] == Feature.Unmarked):
+            toReturn += "u%s, "%f 
+        elif(dict[f] == Feature.Any):
+            toReturn += "@%s, "%f  
+        elif(dict[f] == Feature.NotSpecified):
+            toReturn += "0%s, "%f 
+        else: 
+           raise ValueError("No such feature or value: " + f)
+    return toReturn[:-2]
+
 class Phoneme:
     def __init__(self, quick = None,
                  syll = Feature.NotSpecified,
-                 long = Feature.NotSpecified,
                  cons = Feature.NotSpecified,
-                 approx = Feature.NotSpecified,
                  son = Feature.NotSpecified,
                  cont = Feature.NotSpecified,
                  del_rel = Feature.NotSpecified,
                  flap = Feature.NotSpecified,
                  trill = Feature.NotSpecified,
-                 nasal = Feature.NotSpecified,
+                 nas = Feature.NotSpecified,
                  voice = Feature.NotSpecified,
                  spread_gl = Feature.NotSpecified,
                  constr_gl = Feature.NotSpecified,
-                 labial = Feature.NotSpecified,
+                 lab = Feature.NotSpecified,
                  round = Feature.NotSpecified,
-                 labiodental = Feature.NotSpecified,
+                 labiodent = Feature.NotSpecified,
                  cor = Feature.NotSpecified,
                  ant = Feature.NotSpecified,
                  dist = Feature.NotSpecified,
@@ -51,24 +74,26 @@ class Phoneme:
                  low = Feature.NotSpecified,
                  front = Feature.NotSpecified,
                  back = Feature.NotSpecified,
-                 tense = Feature.NotSpecified):
+                 tense = Feature.NotSpecified, 
+                 lar = Feature.NotSpecified, 
+                 TR = Feature.NotSpecified,
+                 rhotic = Feature.NotSpecified,
+                 tap = Feature.NotSpecified):
         self._features = {}
         self._features['syll'] = syll
-        self._features['long'] = long
         self._features['cons'] = cons
-        self._features['approx'] = approx
         self._features['son'] = son
         self._features['cont'] = cont
         self._features['del_rel'] = del_rel
         self._features['flap'] = flap
         self._features['trill'] = trill
-        self._features['nasal'] = nasal
+        self._features['nas'] = nas
         self._features['voice'] = voice
         self._features['spread_gl'] = spread_gl
         self._features['constr_gl'] = constr_gl
-        self._features['labial'] = labial
+        self._features['lab'] = lab
         self._features['round'] = round
-        self._features['labiodental'] = labiodental
+        self._features['labiodent'] = labiodent
         self._features['cor'] = cor
         self._features['ant'] = ant
         self._features['dist'] = dist
@@ -80,6 +105,10 @@ class Phoneme:
         self._features['front'] = front
         self._features['back'] = back
         self._features['tense'] = tense
+        self._features['lar'] = lar
+        self._features['TR'] = TR
+        self._features['rhotic'] = rhotic
+        self._features['tap'] = tap
         if quick:
             for key in self._features.keys():
                 self._features[key] = Feature.Minus
@@ -119,26 +148,8 @@ class Phoneme:
             self._features['back'] = Feature.NotSpecified
             self._features['tense'] = Feature.NotSpecified
     def __repr__(self):
-        '''doesn't display 0s'''
-        toReturn = '<Phoneme: '
-        keys = self._features.keys()
-        keys.sort()
-        for f in keys:
-            if(self._features[f] == Feature.Plus):
-                toReturn += "+%s, "%f
-            elif(self._features[f] == Feature.Minus):
-                toReturn += "-%s, "%f
-            elif(self._features[f] == Feature.Needs):
-                toReturn += "?%s, "%f
-            elif(self._features[f] == Feature.Marked):
-                toReturn += "m%s, "%f
-            elif(self._features[f] == Feature.Unmarked):
-                toReturn += "u%s, "%f 
-            elif(self._features[f] == Feature.Any):
-                toReturn += "@%s, "%f  
-            else: #Feature.NotSpecified
-               pass
-        return toReturn[:-2] + ">" #remove last comma and space
+        '''string representation'''
+        return '<Phoneme: ' + FeatureRepr(self._features) + ">" #remove last comma and space
     def needy(self):
         needs = [feat for feat in self._features.keys()
                  if self._features[feat] == Feature.Needs]

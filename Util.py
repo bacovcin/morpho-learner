@@ -22,6 +22,8 @@ def format(x):
                     arg += str(Feature.Unmarked)
                 elif feat[0] == '@':
                     arg += str(Feature.Any)
+                elif feat[0] == '0':
+                    arg += str(Feature.NotSpecified)
                 else:
                     raise ValueError("No such feature value: " + feat[0])
                 arg += ", "
