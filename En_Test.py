@@ -17,9 +17,6 @@ if __name__ == '__main__':
     ])
     ordering = ['ROOT','TAM']
     ms = create_model_space(lexicon, ordering) 
-    for model in ms[1]: 	
-	print model[1][1][0]
-    raw_input()
     models = build_models(ms,lexicon)
     smallest = check_models(models,settings(1,1))
     for model in smallest:
