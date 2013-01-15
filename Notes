@@ -1,0 +1,23 @@
+Should probably implement some feature geometry or weight important features more.
+
+At the moment the system would rather match
+T > I
+or O > N
+than I to O
+in TINk > TOt
+
+
+
+
+
+---
+How to find all paths
+[ 0, -3, -6, -9, -12]
+[-3,  9,  6,  3,  0]
+[-6,  6, 13, 10,  7]
+[-9,  3, 10,  9,  9]
+
+['T', 'I', '_', 'N', 'k']
+['T', 'O', 't', '_', '_']
+
+Match, Fmatch, add, del, del
