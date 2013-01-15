@@ -235,31 +235,37 @@ def PhonParse(string):
     characterlist = ParseTIPA(string)
     return [IPA[c] for c in characterlist]
 
+def IPAword(IPAlist):
+    '''Takes a list of phonemes and prints each phoneme symbol'''
+    return [IPA[c] for c in IPAlist]
+
 
 def subset(featurelist, toprint = True):
     '''takes string of "+feat, -feat" and returns TIPA representation of
     all phonemes in IPA that match those features '''
-    features = featurelist.split(", ")
-    featurelist = {}
-    for feat in features:
-        arg = feat[1:]
-        if feat[0] == '+':
-            featurelist[arg] = Feature.Plus
-        elif feat[0] == '-':
-            featurelist[arg] = Feature.Minus
-        elif feat[0] == '0':
-            featurelist[arg] = Feature.NotSpecified
-        elif feat[0] == '?':
-            featurelist[arg] = Feature.Needs
-        elif feat[0] == 'm':
-            featurelist[arg] = Feature.Marked
-        elif feat[0] == 'u':
-            featurelist[arg] = Feature.Unmarked
-        elif feat[0] == '@':
-            featurelist[arg] = Feature.Any
-        else:
-            raise ValueError("No such feature value: " + feat[0]) 
+    if type(featurelist) == str:
+        features = featurelist.split(", ")
+        featurelist = {}
+        for feat in features:
+            arg = feat[1:]
+            if feat[0] == '+':
+                featurelist[arg] = Feature.Plus
+            elif feat[0] == '-':
+                featurelist[arg] = Feature.Minus
+            elif feat[0] == '0':
+                featurelist[arg] = Feature.NotSpecified
+            elif feat[0] == '?':
+                featurelist[arg] = Feature.Needs
+            elif feat[0] == 'm':
+                featurelist[arg] = Feature.Marked
+            elif feat[0] == 'u':
+                featurelist[arg] = Feature.Unmarked
+            elif feat[0] == '@':
+                featurelist[arg] = Feature.Any
+            else:
+                raise ValueError("No such feature value: " + feat[0]) 
     set = IPA.copy()
+    del set['_']
     for key in featurelist.keys():
         for elem in set.keys():
             if set[elem][key] != featurelist[key]:
@@ -273,3 +279,4 @@ def subset(featurelist, toprint = True):
 if __name__ == "__main__":
     #print subset('+lab, -syll')
     print PhonParse(r'\ae')
+    print subset("+high, +round")
