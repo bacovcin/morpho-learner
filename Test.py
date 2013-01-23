@@ -2,22 +2,22 @@ from input_data import *
 import string
 if __name__ == '__main__':
     lexicon = Dictionaryify([
-    word('abida',[('ROOT','r1'),('THEME','v1'),('TENSE','t1')]),
-    word('ideab',[('ROOT','r1'),('THEME','v2'),('TENSE','t1')]),
-    word('abiba',[('ROOT','r1'),('THEME','v1'),('TENSE','t2')]),
-    word('ibeab',[('ROOT','r1'),('THEME','v2'),('TENSE','t2')]),
-    word('abuda',[('ROOT','r2'),('THEME','v1'),('TENSE','t1')]),
-    word('udeab',[('ROOT','r2'),('THEME','v2'),('TENSE','t1')]),
-    word('abuba',[('ROOT','r2'),('THEME','v1'),('TENSE','t2')]),
-    word('ubeab',[('ROOT','r2'),('THEME','v2'),('TENSE','t2')])
+    word(r'pater',[('ROOT','FATHER'),('CASE','NOM')]),
+    word(r'patrey',[('ROOT','FATHER'),('CASE','DAT')]),
+    word(r'blahs',[('ROOT','BLAH'),('CASE','NOM')]),
+    word(r'blahey',[('ROOT','BLAH'),('CASE','DAT')]),
+    word(r'wugs',[('ROOT','WUG'),('CASE','NOM')]),
+    word(r'wugey',[('ROOT','WUG'),('CASE','DAT')]),
     ])
-    ordering = ['ROOT','THEME','TENSE']
-    models = build_models(create_model_space(lexicon, ordering),lexicon)
-    smallest = check_models(models,settings(1,1))
-    for model in smallest:
+    ordering = ['ROOT','CASE']
+    models = build_models(create_model_space(lexicon, ordering),lexicon,settings(1,1,3,0.45))
+    smallest = check_models(models,settings(1,1,3,0.33))
+    for i in range(len(smallest)):
+	model = smallest[i]
+	print 'Model Number ' + str(i) + ':'
         for item in model.vocab:
             print 'Morphological Feature: ' + str(item.morph_feature)
             print 'Phonology: ' + str(item.exponent.phon)
             print 'Side: ' + str(item.exponent.side)
             print 'Context: ' + str(item.context)
-    
+	print '\n\n' 

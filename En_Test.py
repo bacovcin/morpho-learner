@@ -19,10 +19,14 @@ if __name__ == '__main__':
     ms = create_model_space(lexicon, ordering) 
     models = build_models(ms,lexicon)
     smallest = check_models(models,settings(1,1))
+    i = 0
     for model in smallest:
+	i = i + 1
+	print 'Model #' + str(i) + ':'
         for item in model.vocab:
             print 'Morphological Feature: ' + str(item.morph_feature)
             print 'Phonology: ' + str(item.exponent.phon)
             print 'Side: ' + str(item.exponent.side)
             print 'Context: ' + str(item.context)
+	print '\n\n'
     

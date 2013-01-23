@@ -326,5 +326,6 @@ def generateProcesses(input, output):
 if __name__ == "__main__":
     # 4 and 0 and 1 an 13
     #print len(featureDifference(IPA['u'], IPA['P']))
-    print generateProcesses(PhonParse(r'sIN'), PhonParse(r'sUN'))#"sing", "gesang")
+    #print generateProcesses(PhonParse(r'sIN'), PhonParse(r'sUN'))#"sing", "gesang")
+    print generateProcesses(PhonParse(r'r'), PhonParse(r's'))
 
