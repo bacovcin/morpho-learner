@@ -94,6 +94,9 @@ def find_common_suffix(word_list):
 def create_mp_model(model,lexicon,setting):
     '''adds morpho-phonological rules to models that fail to generate the data with only contextual allomorphy'''
     testModel = {}
+    vocab = []
+    for i in range(len(model)-1,-1,-1):
+	vocab.append([])
     for i in range(len(model)-1,-1,-1):
 	curMorphType = model[i]
 	type = curMorphType[0]
@@ -141,9 +144,11 @@ def create_mp_model(model,lexicon,setting):
 			    break
 		    else:
 			testModel[morph]['s'] = [['',[y for x in possible_suffixes for y in possible_suffixes[x][1:]]]]
+			vocab[i].append(vocab_item(morph,'','s',list(subSet)))
 			continue
 		    suffix_pairs = set([(suffix,y) for y in possible_suffixes if y != suffix])
 		    testModel[morph]['s'] = [[suffix,possible_suffixes[suffix][1]]]
+		    vocab[i].append(vocab_item(morph,suffix,'s',list(subSet)))
 		    for pair in suffix_pairs:
 		        a = PhonParse(pair[0])
 		        b = PhonParse(pair[1])
@@ -192,9 +197,11 @@ def create_mp_model(model,lexicon,setting):
 			    break
 		    else:
                         testModel[morph]['p'] = [[r'',[y for x in possible_prefixes for y in possible_prefixes[x][1:]]]]
+			vocab[i].append(vocab_item(morph,'','p',list(subSet)))
                         continue	
 		    prefix_pairs = set([(prefix,y) for y in possible_prefixes if y != prefix])
   		    testModel[morph]['p'] = [[prefix,possible_prefixes[prefix][1]]]
+		    vocab[i].append(vocab_item(morph,prefix,'p',list(subSet)))
 		    for pair in prefix_pairs:
 		        a = PhonParse(pair[0])
 		        b = PhonParse(pair[1])
@@ -255,9 +262,11 @@ def create_mp_model(model,lexicon,setting):
 			    suffix = suffixList[0]
 		    else:
                         testModel[morph]['s'] = [['',[y for x in possible_suffixes for y in possible_suffixes[x]]]]
+			vocab[i].append(vocab_item(morph,'','s',list(subSet)))
                         continue
    		    suffix_pairs = set([(suffix,y) for y in possible_suffixes if y != suffix])
 		    testModel[morph]['s']= [[suffix,possible_suffixes[suffix][1]]]
+		    vocab[i].append(vocab_item(morph,suffix,'s',list(subSet)))
 	  	    for pair in suffix_pairs:
 		        a = PhonParse(pair[0])
 		        b = PhonParse(pair[1])
@@ -317,9 +326,11 @@ def create_mp_model(model,lexicon,setting):
 			    prefix = prefixList[0]
 		    else:
                         testModel[morph]['p'] = [['',[y for x in possible_suffixes for y in possible_suffixes[x]]]]
+			vocab[i].append(vocab_item(morph,'','p',list(subSet)))
                         continue
 		    prefix_pairs = set([(prefix,y) for y in possible_prefixes if y != prefix])
 		    testModel[morph]['p'] = [[prefix,possible_prefixes[prefix][1]]]
+		    vocab[i].append(vocab_item(morph,prefix,'p',list(subSet)))
 		    for pair in prefix_pairs:
 		        a = PhonParse(pair[0])
 		        b = PhonParse(pair[1])
@@ -362,20 +373,50 @@ def create_mp_model(model,lexicon,setting):
 			elif len(word[0]) == longlen:
 			    roots.append(word[0])
 		    if len(roots) > 1:
-			testModel[morph]['b'] = [roots[randint(0,len(roots)-1)],[x[1] for x in wordList]]
+			root = roots[randint(0,len(roots)-1)]
+			testModel[morph]['b'] = [root,[x[1] for x in wordList]]
+			vocab[i].append(vocab_item(morph,root,'b',list(subSet)))
 		    else:
 			testModel[morph]['b'] = [roots[0],[x[1] for x in wordList]]
-    return testModel 
+			vocab[i].append(vocab_item(morph,roots[0],'b',list(subSet)))
+    return vocab  
 
 def add_mprules(model,lexicon,setting):
     '''adds morpho-phonological rules to models that fail to generate the data with only contextual allomorphy'''
+    def check_vocab(vocab,lexicon):
+	problems = []
+        for type in lexicon.keys():
+            for key in lexicon[type].keys():
+                for word in lexicon[type][key]:
+                    morphs = tuple(y[1] for y in word.morphology)
+                    phonology = ''
+		    item_list = []
+                    for morph_list in vocab:
+                        for item in morph_list:
+                            if (item.morph_feature in morphs) and (False not in list(x in set(item.context) for x in set(morphs)-set([item.morph_feature]))):
+                                if item.exponent.side == 'b':
+                                    phonology = item.exponent.phon
+                                elif item.exponent.side == 'p':
+                                    phonology = item.exponent.phon + phonology
+                                elif item.exponent.side == 's':
+                                    phonology = phonology + item.exponent.phon
+			        item_list.append(item)
+                    if phonology != word.phonology:
+                        problems.append((phonology,word.phonology))
+        return problems
+    mprules = []
     workingModel = create_mp_model(model,lexicon,setting)
-    for item in workingModel:
-	print 'Morpheme: ' + item
-	for side in workingModel[item]:
-	    print 'Side: ' + side
-	    print 'Exponent: ' + str(workingModel[item][side])
+    problems = check_vocab(workingModel,lexicon)
+    for problem in problems:
+	print generateProcesses(PhonParse(problem[0]), PhonParse(problem[1]))
+	mprules.append(rule)
+    #for item in workingModel:
+    #	print 'Morpheme: ' + item
+    #	for side in workingModel[item]:
+    #	    print 'Side: ' + side
+    #	    print 'Exponent: ' + str(workingModel[item][side])
     raw_input()
+    return model(list(y for x in workingModel for y in x),mprules)
 
 def create_model_space(lexicon, ordering):
     listOfTypeModels = []
@@ -527,7 +568,7 @@ def build_models(modelSpace, lexicon, settings):
                 models.append(model(list(y for x in vocab for y in x),[]))
             else:
                 fail = fail + 1
-                mprules = add_mprules(curModel,lexicon,settings)
+                models.append(add_mprules(curModel,lexicon,settings))
             print 'Section ' + str(compSize) + ' out of ' + str(len(modelSpace)) + ': ' +  str("%.2f" % ((float(i)/float(len(modelSpace[compSize])))*float(100))) + '% complete'
     print 'Success: ' + str(sucess)
     print 'Fail: ' + str(fail)
