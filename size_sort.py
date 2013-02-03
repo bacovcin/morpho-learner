@@ -1,7 +1,12 @@
+from progressbar import *
 def size_sort(ms):
 	'''Sorts an iterable with elements of various length into groups by length of element'''
 	results = []
-	for model in ms:
+	widgets = ['Sorting Model Space: ', Percentage(), ' ', Bar(marker=RotatingMarker()),
+                   ' ', ETA()]
+        pbar = ProgressBar(widgets=widgets,maxval=len(ms)).start()
+	for i in xrange(len(ms)):
+		model = ms[i]
 		length = 0
 		for x in model:
 			for morpheme in x[1]:
@@ -13,4 +18,6 @@ def size_sort(ms):
 			for i in range(length-len(results)):
 				results.append([])
 			results[length-1].append(model)
+		pbar.update(i)
+	pbar.finish()
 	return results

@@ -1,3 +1,4 @@
+from progressbar import *
 from itertools import combinations
 def set_combs(initSet):
     for i in range(1,len(initSet)+1,1):
@@ -44,7 +45,20 @@ frozenset([frozenset([2, 3]), frozenset([1, 4])])"""
 def product(alist):
     pools = map(tuple, (x for x in alist))
     result = [[]]
-    for pool in pools:
-        result = [x+[y] for x in result for y in pool]
+    for i in xrange(len(pools)):
+        result = [x+[y] for x in result for y in pools[i]]
+    for prod in result:
+        yield tuple(prod)
+
+def product_wbar(alist):
+    pools = map(tuple, (x for x in alist))
+    result = [[]]
+    widgets = ['Multiplying Sets: ', Percentage(), ' ', Bar(marker=RotatingMarker()),
+                   ' ', ETA()]
+    pbar = ProgressBar(widgets=widgets).start()
+    for i in xrange(len(pools)):
+        pbar.update(i+1)
+        result = [x+[y] for x in result for y in pools[i]]
+    pbar.finish()
     for prod in result:
         yield tuple(prod)

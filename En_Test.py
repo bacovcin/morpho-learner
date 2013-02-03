@@ -2,31 +2,24 @@ from input_data import *
 import string
 if __name__ == '__main__':
     lexicon = Dictionaryify([
-    word('riN',[('ROOT','RING'),('TAM','PRESENT')]),
-    word('ruN',[('ROOT','RING'),('TAM','PARTICIPLE')]),
-   # word('raN',[('ROOT','RING'),('TAM','PAST')]),
-    word('siN',[('ROOT','SING'),('TAM','PRESENT')]),
-    word('suN',[('ROOT','SING'),('TAM','PARTICIPLE')]),
-   # word('saN',[('ROOT','SING'),('TAM','PAST')]),
-   # word('briN',[('ROOT','BRING'),('TAM','PRESENT')]),
-   # word('braUt',[('ROOT','BRING'),('TAM','PARTICIPLE')]),
-   # word('braN',[('ROOT','BRING'),('TAM','PAST')]),
-    word('play',[('ROOT','PLAY'),('TAM','PRESENT')]),
-    word('played',[('ROOT','PLAY'),('TAM','PARTICIPLE')]),
-   # word('played',[('ROOT','PLAY'),('TAM','PAST')]),
+    word(r'fIS',[('ROOT','FISH'),('NUMBER','SG')]),
+    word(r'fIS9z',[('ROOT','FISH'),('NUMBER','PL')]),
+    word(r'dAg',[('ROOT','DOG'),('NUMBER','SG')]),
+    word(r'dAgz',[('ROOT','DOG'),('NUMBER','PL')]),
+    word(r'c\ae t',[('ROOT','CAT'),('NUMBER','SG')]),
+    word(r'c\ae ts',[('ROOT','CAT'),('NUMBER','PL')]),
+    word(r'toU',[('ROOT','TOE'),('NUMBER','SG')]),
+    word(r'toUz',[('ROOT','TOE'),('NUMBER','PL')])
     ])
-    ordering = ['ROOT','TAM']
-    ms = create_model_space(lexicon, ordering) 
-    models = build_models(ms,lexicon)
-    smallest = check_models(models,settings(1,1))
-    i = 0
-    for model in smallest:
-	i = i + 1
-	print 'Model #' + str(i) + ':'
+    ordering = ['ROOT','NUMBER']
+    models = build_models(create_model_space(lexicon, ordering),lexicon,settings(1,1,3,2),mp=False)
+    smallest = check_models(models,settings(1,1,3,2))
+    for i in range(len(smallest)):
+	model = smallest[i]
+	print 'Model Number ' + str(i+1) + ':'
         for item in model.vocab:
             print 'Morphological Feature: ' + str(item.morph_feature)
             print 'Phonology: ' + str(item.exponent.phon)
             print 'Side: ' + str(item.exponent.side)
             print 'Context: ' + str(item.context)
-	print '\n\n'
-    
+	print '\n\n' 

@@ -1,3 +1,4 @@
+from progressbar import *
 from size_sort import *
 from Comb import *
 from itertools import repeat
@@ -91,7 +92,7 @@ def find_common_suffix(word_list):
                 result = long_string[j:i]
     return result
 
-def create_mp_model(model,lexicon,setting):
+def create_mp_model(model,lexicon,setting,debug = False):
     '''adds morpho-phonological rules to models that fail to generate the data with only contextual allomorphy'''
     testModel = {}
     vocab = []
@@ -111,10 +112,11 @@ def create_mp_model(model,lexicon,setting):
                 for subSet in list(x for x in sSet):
                     words = [x for x in lexicon[type][morph] if set(set([y[1] for y in x.morphology])-set([morph])).issubset(subSet)]
 		    
-		    #print 'Starting Report:'
-		    #print morph
-		    #print 'Suffix'
-                    #raw_input([x.phonology for x in words])
+		    if debug:
+			print 'Starting Report:'
+		    	print morph
+		    	print 'Suffix'
+                    	raw_input([x.phonology for x in words])
 		    shortlen = 100
 		    for w in words:
 			if len(w.phonology) < shortlen:
@@ -164,10 +166,11 @@ def create_mp_model(model,lexicon,setting):
 			testModel[morph]['s'].append([phonOut,possible_suffixes[pair[1]][1]])
                 for subSet in list(x for x in pSet):
                     words = [x for x in lexicon[type][morph] if set(set([y[1] for y in x.morphology])-set([morph])).issubset(subSet)]
-		    #print 'Starting Report:'
-		    #print morph
-		    #print 'Prefix'
-                    #raw_input([x.phonology for x in words])
+		    if debug:
+		        print 'Starting Report:'
+		        print morph
+		        print 'Prefix'
+                        raw_input([x.phonology for x in words])
 		    shortlen = 100
 		    for w in words:
 			if len(w.phonology) < shortlen:
@@ -231,10 +234,11 @@ def create_mp_model(model,lexicon,setting):
                                         elif side == 'p':
                                             curPhon = expon[0].join(curPhon.split(expon[0])[1:])
                         wordList.append((curPhon,w.morphology))
-		    #print 'Starting Report:'
-		    #print morph
-		    #print 'Suffix'
-                    #raw_input([x.phonology for x in words])
+		    if debug:
+		        print 'Starting Report:'
+		        print morph
+		        print 'Suffix'
+                        raw_input([x.phonology for x in words])
 		    shortlen = 100
 		    for w in wordList:
 			if len(w[0]) < shortlen:
@@ -295,10 +299,11 @@ def create_mp_model(model,lexicon,setting):
                                         elif side == 'p':
                                             curPhon = expon[0].join(curPhon.split(expon[0])[1:])
                         wordList.append((curPhon,w.morphology))
-		    #print 'Starting Report:'
-		    #print morph
-		    #print 'Prefix'
-                    #raw_input([x.phonology for x in words])
+		    if debug:
+		        print 'Starting Report:'
+		        print morph
+		        print 'Prefix'
+                        raw_input([x.phonology for x in words])
 		    shortlen = 100
 		    for w in wordList:
 			if len(w[0]) < shortlen:
@@ -360,10 +365,11 @@ def create_mp_model(model,lexicon,setting):
 					elif side == 'p':
 					    curPhon = expon[0].join(curPhon.split(expon[0])[1:])
 			wordList.append((curPhon,word.morphology))					    
-		    #print 'Starting Report:'
-		    #print morph
-		    #print 'Base'
-                    #raw_input([x[0] for x in wordList])
+		    if debug:
+		        print 'Starting Report:'
+		        print morph
+		        print 'Base'
+                        raw_input([x[0] for x in wordList])
 		    longlen = 0
 		    roots = []
 		    for word in wordList:
@@ -381,7 +387,7 @@ def create_mp_model(model,lexicon,setting):
 			vocab[i].append(vocab_item(morph,roots[0],'b',list(subSet)))
     return vocab  
 
-def add_mprules(cModel,lexicon,setting):
+def add_mprules(cModel,lexicon,setting,debug=False):
     '''adds morpho-phonological rules to models that fail to generate the data with only contextual allomorphy'''
     def check_vocab(vocab,lexicon):
 	problems = []
@@ -405,18 +411,19 @@ def add_mprules(cModel,lexicon,setting):
                         problems.append((phonology,word.phonology))
         return problems
     mprules = []
-    workingModel = create_mp_model(cModel,lexicon,setting)
+    workingModel = create_mp_model(cModel,lexicon,setting,debug=False)
     problems = check_vocab(workingModel,lexicon)
     for problem in problems:
 	print generateProcesses(PhonParse(problem[0]), PhonParse(problem[1]))
 	#mprules.append(rule)
     old_model = list(y for x in workingModel for y in x)
-    #for item in old_model:
-    #    print 'Morphological Feature: ' + str(item.morph_feature)
-    #    print 'Phonology: ' + str(item.exponent.phon)
-    #    print 'Side: ' + str(item.exponent.side)
-    #    print 'Context: ' + str(item.context)
-    #raw_input('\n\n')
+    if debug:
+         for item in old_model:
+             print 'Morphological Feature: ' + str(item.morph_feature)
+             print 'Phonology: ' + str(item.exponent.phon)
+             print 'Side: ' + str(item.exponent.side)
+             print 'Context: ' + str(item.context)
+         raw_input('\n\n')
     new_model = model(old_model,mprules)
     return new_model
 
@@ -448,14 +455,8 @@ def create_model_space(lexicon, ordering):
                             morphSet.append((morph,(('b',frozenset([])),('p',z[0]),('s',z[1]))))
                             morphSet.append((morph,(('b',frozenset([])),('p',z[1]),('s',z[0]))))
 	    listOfMorphs.append(tuple(morphSet))
-        listOfTypeModels.append(tuple(product([[type],tuple(product(listOfMorphs))])))
-        try:
-            i = i + 1
-            print i
-        except:
-            i = 1
-            print i
-    outStart = tuple(product(listOfTypeModels))
+        listOfTypeModels.append(tuple(product_wbar([[type],tuple(product_wbar(listOfMorphs))])))
+    outStart = tuple(product_wbar(listOfTypeModels))
     output = tuple(size_sort(outStart))
     return output
 
@@ -480,14 +481,20 @@ def check_vocab(vocab,lexicon):
                     return False
     return True
 
-def build_models(modelSpace, lexicon, settings):
+def build_models(modelSpace, lexicon, settings, mp = True):
     models = []
     sucess = 0
     fail = 0
     compSize = -1
     while sucess == 0:
 	compSize = compSize + 1
-        for i in range(len(modelSpace[compSize])):
+	widgets = ['Section ' + str(compSize) + ' out of ' + str(len(modelSpace)) + ': ',
+                        Percentage(), ' ', Bar(marker=RotatingMarker()),' ', ETA()]
+        try:
+            pbar = ProgressBar(widgets=widgets,maxval=len(modelSpace[compSize])).start()
+	except:
+	    pbar = ProgressBar(widgets=widgets,maxval=1).start()
+        for i in xrange(len(modelSpace[compSize])):
             curModel = modelSpace[compSize][i]
             vocab = []
             for j in range(len(curModel)):
@@ -570,8 +577,10 @@ def build_models(modelSpace, lexicon, settings):
                 models.append(model(list(y for x in vocab for y in x),[]))
             else:
                 fail = fail + 1
-                models.append(add_mprules(curModel,lexicon,settings))
-            print 'Section ' + str(compSize) + ' out of ' + str(len(modelSpace)) + ': ' +  str("%.2f" % ((float(i)/float(len(modelSpace[compSize])))*float(100))) + '% complete'
+		if mp:
+                    models.append(add_mprules(curModel,lexicon,settings))
+	    pbar.update(i+1)
+    	pbar.finish()
     print 'Success: ' + str(sucess)
     print 'Fail: ' + str(fail)
     return models
