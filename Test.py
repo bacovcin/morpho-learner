@@ -10,8 +10,8 @@ if __name__ == '__main__':
     word(r'wugey',[('ROOT','WUG'),('CASE','DAT')]),
     ])
     ordering = ['ROOT','CASE']
-    models = build_models(create_model_space(lexicon, ordering),lexicon,settings(1,1,3,0.45))
-    smallest = check_models(models,settings(1,1,3,0.33))
+    models = build_models(create_model_space(lexicon, ordering),lexicon,settings(1,1,3,2))
+    smallest = check_models(models,settings(1,1,3,2))
     for i in range(len(smallest)):
 	model = smallest[i]
 	print 'Model Number ' + str(i) + ':'

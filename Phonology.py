@@ -32,7 +32,6 @@ def featureDifference(x,y, toprint = False):
     
     
 def SideofDirFeats(side, dir, s, index, debug=False):
-    
     Feats = {}
     
     if side == "left":
@@ -59,7 +58,7 @@ def SideofDirFeats(side, dir, s, index, debug=False):
             for feat in OnlyPlusMinus:
                 Feats[feat] = s[index][feat]
         except AttributeError: 
-            pass #s[index-1] == "_"
+	    pass #s[index-1] == "_"
     else:
         raise Exception("Side is not left, right, or none: ", side)
     
@@ -98,7 +97,7 @@ def findwhereInsDel(s, index, debug = False):
     #  N segments from R or L
     #  before/after segment with features [X]
     #  Syll structure?
-    s = filter(lambda x: x!="_", s)
+    #s = filter(lambda x: x!="_", s)
     absPosL = index
     absPosR = len(s) - (index + 1)
     
@@ -125,7 +124,7 @@ def findwhereInsDel(s, index, debug = False):
         
 def findwhereFeatChange(s, index, debug=False):
     '''Find which segment undergoes feature change'''
-    s = filter(lambda x: x!="_", s)
+    #s = filter(lambda x: x!="_", s)
     absPosL = index
     absPosR = len(s) - (index + 1)
     
@@ -327,5 +326,5 @@ if __name__ == "__main__":
     # 4 and 0 and 1 an 13
     #print len(featureDifference(IPA['u'], IPA['P']))
     #print generateProcesses(PhonParse(r'sIN'), PhonParse(r'sUN'))#"sing", "gesang")
-    print generateProcesses(PhonParse(r'r'), PhonParse(r's'))
+    print generateProcesses(PhonParse(r'patreys'), PhonParse(r'pater'))
 
