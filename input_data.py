@@ -156,11 +156,11 @@ def create_mp_model(model,lexicon,setting,debug = False):
 		        a = PhonParse(pair[0])
 		        b = PhonParse(pair[1])
 		        phonOut = r''
-		        for i in range(len(a)):
-		            if len(featureDifference(a[i], b[i])) <= setting.natural:
-				print b[i]
-				print IPAword([b[i]])[0]
-			        phonOut = phonOut + IPAword([b[i]])[0]
+		        for j in range(len(a)):
+		            if len(featureDifference(a[j], b[j])) <= setting.natural:
+				print b[j]
+				print IPAword([b[j]])[0]
+			        phonOut = phonOut + IPAword([b[j]])[0]
 			    else:
 			        phonOut = r''
 			testModel[morph]['s'].append([phonOut,possible_suffixes[pair[1]][1]])
@@ -210,9 +210,9 @@ def create_mp_model(model,lexicon,setting,debug = False):
 		        a = PhonParse(pair[0])
 		        b = PhonParse(pair[1])
 	                phonOut = r''
-		        for i in range(len(a)):
-		            if len(featureDifference(a[i], b[i])) <= setting.natural:
-			        phonOut = phonOut + str(IPAword([b[i]]))
+		        for j in range(len(a)):
+		            if len(featureDifference(a[j], b[j])) <= setting.natural:
+			        phonOut = phonOut + str(IPAword([b[j]]))
 			    else:
 			        phonOut = r''
 			testModel[morph]['p'].append([phonOut,possible_prefixes[pair[1]][1]])
@@ -276,9 +276,9 @@ def create_mp_model(model,lexicon,setting,debug = False):
 		        a = PhonParse(pair[0])
 		        b = PhonParse(pair[1])
 		        phonOut = r''
-		        for i in range(len(a)):
-		            if len(featureDifference(a[i], b[i])) <= setting.natural:
-			        phonOut = phonOut + IPAword([b[i]])
+		        for j in range(len(a)):
+		            if len(featureDifference(a[j], b[j])) <= setting.natural:
+			        phonOut = phonOut + IPAword([b[j]])
 			    else:
 			        phonOut = r''
 			testModel[morph]['s'].append([phonOut,possible_suffixes[pair[1]][1]])
@@ -308,7 +308,7 @@ def create_mp_model(model,lexicon,setting,debug = False):
 		    for w in wordList:
 			if len(w[0]) < shortlen:
 				shortlen = len(w[0])
-		    for i in range(shortlen,0,-1):
+		    for j in range(shortlen,0,-1):
 			possible_prefixes = {}
 			for w in wordList:
 			    try:
@@ -341,9 +341,9 @@ def create_mp_model(model,lexicon,setting,debug = False):
 		        a = PhonParse(pair[0])
 		        b = PhonParse(pair[1])
 		        phonOut = r''
-		        for i in range(len(a)):
-		            if len(featureDifference(a[i], b[i])) <= setting.natural:
-			        phonOut = phonOut + IPAword([b[i]])
+		        for j in range(len(a)):
+		            if len(featureDifference(a[j], b[j])) <= setting.natural:
+			        phonOut = phonOut + IPAword([b[j]])
 			    else:
 			        phonOut = r''
 			testModel[morph]['p'].append([phonOut,possible_prefixes[pair[1]][1]])
@@ -372,9 +372,7 @@ def create_mp_model(model,lexicon,setting,debug = False):
                         raw_input([x[0] for x in wordList])
 		    count = 0
 		    roots = []
-		    print wordList
 		    wordList_p = [x[0] for x in wordList]
-		    print wordList_p
 		    for word in set(wordList_p):
 			if wordList_p.count(word) > count:
 			    count = wordList_p.count(word)

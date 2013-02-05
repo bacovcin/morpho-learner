@@ -9,7 +9,9 @@ if __name__ == '__main__':
     word(r'bId',[('ROOT','BID'),('TNS','PRS')]),
     word(r'b{\ae}d',[('ROOT','BID'),('TNS','PST')]),
     word(r'wOk',[('ROOT','WALK'),('TNS','PRS')]),
-    word(r'wOkt',[('ROOT','WALK'),('TNS','PST')])
+    word(r'wOkt',[('ROOT','WALK'),('TNS','PST')]),
+    word(r'brIN',[('ROOT','BRING'),('TNS','PRS')]),
+    word(r'brat',[('ROOT','BRING'),('TNS','PST')]),
     ])
     ordering = ['ROOT','TNS']
     models = build_models(create_model_space(lexicon, ordering),lexicon,settings(1,1,3,2),mp=True)
