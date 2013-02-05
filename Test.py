@@ -6,14 +6,10 @@ if __name__ == '__main__':
     word(r'rida',[('ROOT','RED'),('NUMBER','SG'),('GENDER','FEMININE')]),
     word(r'arud',[('ROOT','RED'),('NUMBER','PL'),('GENDER','MASCULINE')]),
     word(r'ruda',[('ROOT','RED'),('NUMBER','PL'),('GENDER','FEMININE')]),
-    word(r'awet',[('ROOT','WHITE'),('NUMBER','SG'),('GENDER','MASCULINE')]),
-    word(r'weta',[('ROOT','WHITE'),('NUMBER','SG'),('GENDER','FEMININE')]),
-    word(r'awot',[('ROOT','WHITE'),('NUMBER','PL'),('GENDER','MASCULINE')]),
-    word(r'wota',[('ROOT','WHITE'),('NUMBER','PL'),('GENDER','FEMININE')]),
-    word(r'ablk',[('ROOT','BLACK'),('NUMBER','SG'),('GENDER','MASCULINE')]),
-    word(r'blka',[('ROOT','BLACK'),('NUMBER','SG'),('GENDER','FEMININE')]),
-    word(r'ablk',[('ROOT','BLACK'),('NUMBER','PL'),('GENDER','MASCULINE')]),
-    word(r'blka',[('ROOT','BLACK'),('NUMBER','PL'),('GENDER','FEMININE')]),
+    word(r'ablk',[('ROOT','WHITE'),('NUMBER','SG'),('GENDER','MASCULINE')]),
+    word(r'blka',[('ROOT','WHITE'),('NUMBER','SG'),('GENDER','FEMININE')]),
+    word(r'ablk',[('ROOT','WHITE'),('NUMBER','PL'),('GENDER','MASCULINE')]),
+    word(r'blka',[('ROOT','WHITE'),('NUMBER','PL'),('GENDER','FEMININE')]),
     ])
     ordering = ['ROOT','NUMBER','GENDER']
     models = build_models(create_model_space(lexicon, ordering),lexicon,settings(1,1,3,2),mp=False)

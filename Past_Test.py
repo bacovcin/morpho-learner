@@ -2,16 +2,16 @@ from input_data import *
 import string
 if __name__ == '__main__':
     lexicon = Dictionaryify([
-    word(r'fIS',[('ROOT','FISH'),('NUMBER','SG')]),
-    word(r'fIS9z',[('ROOT','FISH'),('NUMBER','PL')]),
-    word(r'dAg',[('ROOT','DOG'),('NUMBER','SG')]),
-    word(r'dAgz',[('ROOT','DOG'),('NUMBER','PL')]),
-    word(r'c{\ae}t',[('ROOT','CAT'),('NUMBER','SG')]),
-    word(r'c{\ae}ts',[('ROOT','CAT'),('NUMBER','PL')]),
-    word(r'toU',[('ROOT','TOE'),('NUMBER','SG')]),
-    word(r'toUz',[('ROOT','TOE'),('NUMBER','PL')])
+    word(r'rIN',[('ROOT','RING'),('TNS','PRS')]),
+    word(r'r{\ae}N',[('ROOT','RING'),('TNS','PST')]),
+    #word(r'sIN',[('ROOT','SING'),('TNS','PRS')]),
+    #word(r's{\ae}N',[('ROOT','SING'),('TNS','PST')]),
+    word(r'bId',[('ROOT','BID'),('TNS','PRS')]),
+    word(r'b{\ae}d',[('ROOT','BID'),('TNS','PST')]),
+    word(r'wOk',[('ROOT','WALK'),('TNS','PRS')]),
+    word(r'wOkt',[('ROOT','WALK'),('TNS','PST')])
     ])
-    ordering = ['ROOT','NUMBER']
+    ordering = ['ROOT','TNS']
     models = build_models(create_model_space(lexicon, ordering),lexicon,settings(1,1,3,2),mp=True)
     smallest = check_models(models,settings(1,1,3,2))
     for i in range(len(smallest)):

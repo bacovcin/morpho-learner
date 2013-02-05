@@ -370,16 +370,19 @@ def create_mp_model(model,lexicon,setting,debug = False):
 		        print morph
 		        print 'Base'
                         raw_input([x[0] for x in wordList])
-		    longlen = 0
+		    count = 0
 		    roots = []
-		    for word in wordList:
-			if len(word[0]) > longlen:
-			    longlen = len(word[0])
-			    roots = [word[0]]
-			elif len(word[0]) == longlen:
-			    roots.append(word[0])
+		    print wordList
+		    wordList_p = [x[0] for x in wordList]
+		    print wordList_p
+		    for word in set(wordList_p):
+			if wordList_p.count(word) > count:
+			    count = wordList_p.count(word)
+			    roots = [word]
+			elif wordList_p.count(word) == count:
+			    roots.append(word)
 		    if len(roots) > 1:
-			root = roots[randint(0,len(roots)-1)]
+			root = roots[randint(-1,len(roots)-1)]
 			testModel[morph]['b'] = [root,[x[1] for x in wordList]]
 			vocab[i].append(vocab_item(morph,root,'b',list(subSet)))
 		    else:
@@ -387,7 +390,7 @@ def create_mp_model(model,lexicon,setting,debug = False):
 			vocab[i].append(vocab_item(morph,roots[0],'b',list(subSet)))
     return vocab  
 
-def add_mprules(cModel,lexicon,setting,debug=False):
+def add_mprules(cModel,lexicon,setting,debug=True):
     '''adds morpho-phonological rules to models that fail to generate the data with only contextual allomorphy'''
     def check_vocab(vocab,lexicon):
 	problems = []
@@ -411,7 +414,7 @@ def add_mprules(cModel,lexicon,setting,debug=False):
                         problems.append((phonology,word.phonology))
         return problems
     mprules = []
-    workingModel = create_mp_model(cModel,lexicon,setting,debug=False)
+    workingModel = create_mp_model(cModel,lexicon,setting,debug=True)
     problems = check_vocab(workingModel,lexicon)
     for problem in problems:
 	print generateProcesses(PhonParse(problem[0]), PhonParse(problem[1]))
