@@ -110,332 +110,234 @@ def create_mp_model(model,lexicon,setting,debug = False):
     '''adds morpho-phonological rules to models that fail to generate the data with only contextual allomorphy'''
     testModel = {}
     vocab = []
-    for i in range(len(model)-1,-1,-1):
-	vocab.append([])
-    for i in range(len(model)-1,-1,-1):
-	curMorphType = model[i]
-	type = curMorphType[0]
-        for k in range(len(curMorphType[1])):
-            curMorph = curMorphType[1][k]
-            bSet = curMorph[1][0][1]
-            pSet = curMorph[1][1][1]
-            sSet = curMorph[1][2][1]
-            morph = curMorph[0]
-	    testModel[morph] = {}
-	    if i == len(model)-1:
-                for subSet in list(x for x in sSet):
-                    words = [x for x in lexicon[type][morph] if set(set([y[1] for y in x.morphology])-set([morph])).issubset(subSet)]
-		    
-		    if debug:
-			print 'Starting Report:'
-		    	print morph
-		    	print 'Suffix'
-                    	raw_input([IPAword(x.phonology) for x in words])
-		    shortlen = 100
-		    for w in words:
-			if len(w.phonology) < shortlen:
-				shortlen = len(w.phonology)
-		    for j in range(-shortlen-1,0,1):
-			possible_suffixes = {}
-			for w in words:
-			    try:
-			        possible_suffixes[tuple(IPAword(w.phonology[j:]))][0] = possible_suffixes[tuple(IPAword(w.phonology[j:]))][0] + 1
-				possible_suffixes[tuple(IPAword(w.phonology[j:]))][1].append(w.morphology)
-			    except:
-				possible_suffixes[tuple(IPAword(w.phonology[j:]))] = [1,[w.morphology]]
-			similarityInx = 0
-			suffixList = []
-			for key in possible_suffixes:
-			    if possible_suffixes[key][0] > similarityInx:
-				similarityInx = possible_suffixes[key][0]
-				suffixList = [key]
-			    elif possible_suffixes[key][0] == similarityInx:
-                                suffixList.append(key)
-			if similarityInx < setting.erat:
-			    continue
-			elif len(suffixList) > 1:
-			    suffix = suffixList[randint(0,len(suffixList)-1)]
-			    break
-			else:
-			    suffix = suffixList[0]
-			    break
+    for k in range(len(model)-1,-1,-1):
+        curMorph = model[k]
+        bSet = curMorph[1][0][1]
+        pSet = curMorph[1][1][1]
+        sSet = curMorph[1][2][1]
+        morph = curMorph[0]
+        testModel[morph] = {}
+        for subSet in list(x for x in sSet):
+            words = subSet
+	    context =  set([y[1] for x in subSet for y in x.morphology])-set([morph])
+	    wordList = []
+            for w in words:
+                curPhon = w.phonology
+                for j in range(len(w.morphology)-1,-1,-1):
+                    aMorph = w.morphology[j][1]
+		    try:
+                        for side in testModel[aMorph]:
+                            for expon in testModel[aMorph][side]:
+                                if w.morphology in expon[1]:
+                                    if expon[0] == '':
+                                        pass
+				    elif side == 's':
+                                        if len(expon[0]) != 0:
+                                            curPhon = curPhon[:-len(expon[0])]
+                                    elif side == 'p':
+                                        if len(expon[0]) != 0:
+                                            curPhon = curPhon[len(expon[0]):]
+		    except:
+			break
+                wordList.append((curPhon,w.morphology))
+	    if debug:
+	        print 'Starting Report:'
+	        print morph
+		print 'Suffix'
+                raw_input([IPAword(x.phonology) for x in words])
+ 	    shortlen = 100
+	    for w in wordList:
+	        if len(w[0]) < shortlen:
+	            shortlen = len(w[0])
+	    for j in range(-shortlen-1,0,1):
+	 	possible_suffixes = {}
+		for w in wordList:
+		    try:
+		        possible_suffixes[tuple(IPAword(w[0][j:]))][0] = possible_suffixes[tuple(IPAword(w[0][j:]))][0] + 1
+			possible_suffixes[tuple(IPAword(w[0][j:]))][1].append(w[1])
+		    except:
+			possible_suffixes[tuple(IPAword(w[0][j:]))] = [1,[w[1]]]
+		similarityInx = 0
+		suffixList = []
+		for key in possible_suffixes:
+		    if possible_suffixes[key][0] > similarityInx:
+			similarityInx = possible_suffixes[key][0]
+			suffixList = [key]
+		    elif possible_suffixes[key][0] == similarityInx:
+                        suffixList.append(key)
+		if similarityInx < setting.erat:
+		    continue
+		elif len(suffixList) > 1:
+		    suffix = suffixList[randint(0,len(suffixList)-1)]
+	        else:
+	            suffix = suffixList[0]
+		break
+	    else:
+                testModel[morph]['s'] = [[[],[y for x in possible_suffixes for y in possible_suffixes[x]]]]
+		vocab.append(vocab_item(morph,[],'s',list(context)))
+                continue
+            suffix_pairs = set([(suffix,y) for y in possible_suffixes if y != suffix])
+	    testModel[morph]['s']= [[[IPA[c] for c in suffix],possible_suffixes[suffix][1]]]
+	    vocab.append(vocab_item(morph,[IPA[c] for c in suffix],'s',list(context)))
+	    for pair in suffix_pairs:
+                a = [IPA[c] for c in pair[0]]
+                b = [IPA[c] for c in pair[1]]
+	        phonOut = []
+	        for j in range(len(a)):
+	            if len(featureDifference(a[j], b[j])) <= setting.natural:
+		        phonOut = phonOut + IPAword([b[j]])
 		    else:
-			testModel[morph]['s'] = [[[],[y for x in possible_suffixes for y in possible_suffixes[x][1:]]]]
-			vocab[i].append(vocab_item(morph,[],'s',list(subSet)))
-			continue
-		    suffix_pairs = set([(suffix,y) for y in possible_suffixes if y != suffix])
-		    testModel[morph]['s'] = [[[IPA[c] for c in suffix],possible_suffixes[suffix][1]]]
-		    vocab[i].append(vocab_item(morph,[IPA[c] for c in suffix],'s',list(subSet)))
-		    for pair in suffix_pairs:
-                        a = [IPA[c] for c in pair[0]]
-                        b = [IPA[c] for c in pair[1]]		        
-			phonOut = []
-		        for j in range(len(a)):
-		            if len(featureDifference(a[j], b[j])) <= setting.natural:
-			        phonOut = phonOut + IPAword([b[j]])
-			    else:
-			        phonOut = []
-			testModel[morph]['s'].append([[IPA[c] for c in phonOut],possible_suffixes[pair[1]][1]])
-                for subSet in list(x for x in pSet):
-                    words = [x for x in lexicon[type][morph] if set(set([y[1] for y in x.morphology])-set([morph])).issubset(subSet)]
-		    if debug:
-		        print 'Starting Report:'
-		        print morph
-		        print 'Prefix'
-                        raw_input([IPAword(x.phonology) for x in words])
-		    shortlen = 100
-		    for w in words:
-			if len(w.phonology) < shortlen:
-				shortlen = len(w.phonology)
-		    for j in range(shortlen,0,-1):
-			possible_prefixes = {}
-			for w in words:
-			    try:
-			        possible_prefixes[tuple(IPAword(w.phonology[:j]))][0] = possible_prefixes[tuple(IPAword(w.phonology[:j]))][0] + 1
-				possible_prefixes[tuple(IPAword(w.phonology[:j]))][1].append(w.morphology)
-			    except:
-				possible_prefixes[tuple(IPAword(w.phonology[:j]))] = [1,[w.morphology]]
-			similarityInx = 0
-			prefixList = []
-			for key in possible_prefixes:
-			    if possible_prefixes[key][0] > similarityInx:
-				similarityInx = possible_prefixes[key][0]
-				prefixList = [key]
-			    elif possible_prefixes[key][0] == similarityInx:
-                                prefixList.append(key)
-			if similarityInx < setting.erat:
-			    continue
-			elif len(prefixList) > 1:
-			    prefix = prefixList[randint(0,len(prefixList)-1)]
-			    break
-			else:
-			    prefix = prefixList[0]
-			    break
-		    else:
-                        testModel[morph]['p'] = [[[],[y for x in possible_prefixes for y in possible_prefixes[x][1:]]]]
-			vocab[i].append(vocab_item(morph,[],'p',list(subSet)))
-                        continue
-		    prefix_pairs = set([(prefix,y) for y in possible_prefixes if y != prefix])
-  		    testModel[morph]['p'] = [[[IPA[c] for c in prefix],possible_prefixes[prefix][1]]]
-		    vocab[i].append(vocab_item(morph,[IPA[c] for c in prefix],'p',list(subSet)))
-		    for pair in prefix_pairs:
-		        a = [IPA[c] for c in pair[0]]
-		        b = [IPA[c] for c in pair[1]]
-	                phonOut = []
-		        for j in range(len(a)):
-		            if len(featureDifference(a[j], b[j])) <= setting.natural:
-			        phonOut = phonOut + IPAword([b[j]])
-			    else:
-			        phonOut = []
-			testModel[morph]['p'].append([[IPA[c] for c in phonOut],possible_prefixes[pair[1]][1]])
-	    elif i > 0:
-                for subSet in list(x for x in sSet):
-                    words = [x for x in lexicon[type][morph] if set(set([y[1] for y in x.morphology])-set([morph])).issubset(subSet)]
-		    wordList = []
-                    for w in words:
-                        curPhon = w.phonology
-                        for j in range(len(w.morphology)-1,i,-1):
-                            aMorph = w.morphology[j][1]
-                            for side in testModel[aMorph]:
-                                for expon in testModel[aMorph][side]:
-                                    if w.morphology in expon[1]:
-                                        if expon[0] == '':
-                                            pass
-				        elif side == 's':
-                                            if len(expon[0]) != 0:
-                                                curPhon = curPhon[:-len(expon[0])]
-                                        elif side == 'p':
-                                            if len(expon[0]) != 0:
-                                                curPhon = curPhon[len(expon[0]):]
-                        wordList.append((curPhon,w.morphology))
-		    if debug:
-		        print 'Starting Report:'
-		        print morph
-		        print 'Suffix'
-                        raw_input([IPAword(x.phonology) for x in words])
-		    shortlen = 100
-		    for w in wordList:
-			if len(w[0]) < shortlen:
-			    shortlen = len(w[0])
-		    for j in range(-shortlen-1,0,1):
-			possible_suffixes = {}
-			for w in wordList:
-			    try:
-			        possible_suffixes[tuple(IPAword(w[0][j:]))][0] = possible_suffixes[tuple(IPAword(w[0][j:]))][0] + 1
-				possible_suffixes[tuple(IPAword(w[0][j:]))][1].append(w[1])
-			    except:
-				possible_suffixes[tuple(IPAword(w[0][j:]))] = [1,[w[1]]]
-			similarityInx = 0
-			suffixList = []
-			for key in possible_suffixes:
-			    if possible_suffixes[key][0] > similarityInx:
-				similarityInx = possible_suffixes[key][0]
-				suffixList = [key]
-			    elif possible_suffixes[key][0] == similarityInx:
-                                suffixList.append(key)
-			if similarityInx < setting.erat:
-			    continue
-			elif len(suffixList) > 1:
-			    suffix = suffixList[randint(0,len(suffixList)-1)]
-			else:
-			    suffix = suffixList[0]
-		    else:
-                        testModel[morph]['s'] = [[[],[y for x in possible_suffixes for y in possible_suffixes[x]]]]
-			vocab[i].append(vocab_item(morph,[],'s',list(subSet)))
-                        continue
-   		    suffix_pairs = set([(suffix,y) for y in possible_suffixes if y != suffix])
-		    testModel[morph]['s']= [[[IPA[c] for c in suffix],possible_suffixes[suffix][1]]]
-		    vocab[i].append(vocab_item(morph,[IPA[c] for c in suffix],'s',list(subSet)))
-	  	    for pair in suffix_pairs:
-                        a = [IPA[c] for c in pair[0]]
-                        b = [IPA[c] for c in pair[1]]
 		        phonOut = []
-		        for j in range(len(a)):
-		            if len(featureDifference(a[j], b[j])) <= setting.natural:
-			        phonOut = phonOut + IPAword([b[j]])
-			    else:
-			        phonOut = []
-			testModel[morph]['s'].append([[IPA[c] for c in phonOut],possible_suffixes[pair[1]][1]])
-                for subSet in list(x for x in pSet):
-                    words = [x for x in lexicon[type][morph] if set(set([y[1] for y in x.morphology])-set([morph])).issubset(subSet)]
-		    wordList = []
-		    for w in words:
-                        curPhon = w.phonology
-                        for j in range(len(w.morphology)-1,i,-1):
-                            aMorph = w.morphology[j][1]
-                            for side in testModel[aMorph]:
-                                for expon in testModel[aMorph][side]:
-                                    if w.morphology in expon[1]:
-                                        if expon[0] == '':
-                                            pass
-				        elif side == 's':
-                                            if len(expon[0]) != 0:
-                                                curPhon = curPhon[:-len(expon[0])]
-                                        elif side == 'p':
-                                            if len(expon[0]) != 0:
-                                                curPhon = curPhon[len(expon[0]):]
-                        wordList.append((curPhon,w.morphology))
-		    if debug:
-		        print 'Starting Report:'
-		        print morph
-		        print 'Prefix'
-                        raw_input([IPAword(x.phonology) for x in words])
-		    shortlen = 100
-		    for w in wordList:
-			if len(w[0]) < shortlen:
-				shortlen = len(w[0])
-		    for j in range(shortlen,0,-1):
-			possible_prefixes = {}
-			for w in wordList:
-			    try:
-			        possible_prefixes[tuple(IPAword(w[0][:j]))][0] = possible_prefixes[tuple(IPAword(w[0][:j]))][0] + 1
-				possible_prefixes[tuple(IPAword(w[0][:j]))][1].append(w[1])
-			    except:
-				possible_prefixes[tuple(IPAword(w[0][:j]))] = [1,[w[1]]]
-			similarityInx = 0
-			prefixList = []
-			for key in possible_prefixes:
-			    if possible_prefixes[key][0] > similarityInx:
-				similarityInx = possible_prefixes[key][0]
-				prefixList = [key]
-			    elif possible_prefixes[key][0] == similarityInx:
-                                prefixList.append(key)
-			if similarityInx < setting.erat:
-			    continue
-			elif len(prefixList) > 1:
-			    prefix = prefixList[randint(0,len(prefixList)-1)]
-			else:
-			    prefix = prefixList[0]
+		testModel[morph]['s'].append([[IPA[c] for c in phonOut],possible_suffixes[pair[1]][1]])
+        for subSet in list(x for x in pSet):
+            words = subSet
+	    context = set([y[1] for x in subSet for y in x.morphology])-set([morph])
+            wordList = []
+	    for w in words:
+                curPhon = w.phonology
+                for j in range(len(w.morphology)-1,-1,-1):
+                    aMorph = w.morphology[j][1]
+                    try:
+                        for side in testModel[aMorph]:
+                            for expon in testModel[aMorph][side]:
+                                if w.morphology in expon[1]:
+                                    if expon[0] == '':
+                                        pass
+                                    elif side == 's':
+                                        if len(expon[0]) != 0:
+                                            curPhon = curPhon[:-len(expon[0])]
+                                    elif side == 'p':
+                                        if len(expon[0]) != 0:
+                                            curPhon = curPhon[len(expon[0]):]
+                    except:
+                        break
+                wordList.append((curPhon,w.morphology))      
+	    if debug:
+	        print 'Starting Report:'
+	        print morph
+	        print 'Prefix'
+                raw_input([IPAword(x.phonology) for x in words])
+	    shortlen = 100
+	    for w in wordList:
+		if len(w[0]) < shortlen:
+	   	    shortlen = len(w[0])
+	    for j in range(shortlen,0,-1):
+		possible_prefixes = {}
+		for w in wordList:
+		    try:
+		        possible_prefixes[tuple(IPAword(w[0][:j]))][0] = possible_prefixes[tuple(IPAword(w[0][:j]))][0] + 1
+			possible_prefixes[tuple(IPAword(w[0][:j]))][1].append(w[1])
+		    except:
+			possible_prefixes[tuple(IPAword(w[0][:j]))] = [1,[w[1]]]
+		similarityInx = 0
+		prefixList = []
+		for key in possible_prefixes:
+		    if possible_prefixes[key][0] > similarityInx:
+			similarityInx = possible_prefixes[key][0]
+			prefixList = [key]
+		    elif possible_prefixes[key][0] == similarityInx:
+                        prefixList.append(key)
+		if similarityInx < setting.erat:
+		    continue
+		elif len(prefixList) > 1:
+		    prefix = prefixList[randint(0,len(prefixList)-1)]
+		else:
+		    prefix = prefixList[0]
+		break
+	    else:
+                testModel[morph]['p'] = [[[],[y for x in possible_prefixes for y in possible_prefixes[x]]]]
+		vocab.append(vocab_item(morph,[],'p',list(context)))
+                continue
+	    prefix_pairs = set([(prefix,y) for y in possible_prefixes if y != prefix])
+	    testModel[morph]['p'] = [[[IPA[c] for c in prefix],possible_prefixes[prefix][1]]]
+	    vocab.append(vocab_item(morph,[IPA[c] for c in prefix],'p',list(context)))
+	    for pair in prefix_pairs:
+                a = [IPA[c] for c in pair[0]]
+                b = [IPA[c] for c in pair[1]]
+	        phonOut = []
+	        for j in range(len(a)):
+	            if len(featureDifference(a[j], b[j])) <= setting.natural:
+		        phonOut = phonOut + IPAword([b[j]])
 		    else:
-                        testModel[morph]['p'] = [[[],[y for x in possible_prefixes for y in possible_prefixes[x]]]]
-			vocab[i].append(vocab_item(morph,[],'p',list(subSet)))
-                        continue
-		    prefix_pairs = set([(prefix,y) for y in possible_prefixes if y != prefix])
-		    testModel[morph]['p'] = [[[IPA[c] for c in prefix],possible_prefixes[prefix][1]]]
-		    vocab[i].append(vocab_item(morph,[IPA[c] for c in prefix],'p',list(subSet)))
-		    for pair in prefix_pairs:
-                        a = [IPA[c] for c in pair[0]]
-                        b = [IPA[c] for c in pair[1]]
 		        phonOut = []
-		        for j in range(len(a)):
-		            if len(featureDifference(a[j], b[j])) <= setting.natural:
-			        phonOut = phonOut + IPAword([b[j]])
-			    else:
-			        phonOut = []
-			testModel[morph]['p'].append([[IPA[c] for c in phonOut],possible_prefixes[pair[1]][1]])
-	    elif i == 0:
-                for subSet in list(x for x in bSet):
-                    words = [x for x in lexicon[type][morph] if set(set([y[1] for y in x.morphology])-set([morph])).issubset(subSet)]
-		    wordList = []
-		    for word in words:
-			curPhon = word.phonology
-			for j in range(len(word.morphology)-1,0,-1):
-			    aMorph = word.morphology[j][1]
-			    for side in testModel[aMorph]:
-				for expon in testModel[aMorph][side]:
-				    if word.morphology in expon[1]:
-					if expon[0] == []:
-					    pass
-					elif side == 's':
-					    if len(expon[0]) != 0:
-						curPhon = curPhon[:-len(expon[0])]
-					elif side == 'p':
-					    if len(expon[0]) != 0:
-                                                curPhon = curPhon[len(expon[0]):]
-			wordList.append((curPhon,word.morphology))					    
-		    if debug:
-		        print 'Starting Report:'
-		        print morph
-		        print 'Base'
-                        raw_input([IPAword(x[0]) for x in wordList])
-		    count = 0
-		    roots = []
-		    wordList_p = [tuple(IPAword(x[0])) for x in wordList]
-		    for word in set(wordList_p):
-			if wordList_p.count(word) > count:
-			    count = wordList_p.count(word)
-			    roots = [word]
-			elif wordList_p.count(word) == count:
-			    roots.append(word)
-		    if len(roots) > 1:
-			root = roots[randint(-1,len(roots)-1)]
-			testModel[morph]['b'] = [[IPA[c] for c in root],[x[1] for x in wordList]]
-			vocab[i].append(vocab_item(morph,[IPA[c] for c in root],'b',list(subSet)))
-		    else:
-			testModel[morph]['b'] = [[IPA[c] for c in roots[0]],[x[1] for x in wordList]]
-			vocab[i].append(vocab_item(morph,[IPA[c] for c in roots[0]],'b',list(subSet)))
+		testModel[morph]['p'].append([[IPA[c] for c in phonOut],possible_prefixes[pair[1]][1]])
+        for subSet in list(x for x in bSet):
+            words = subSet
+            context = set([y[1] for x in subSet for y in x.morphology])-set([morph])
+	    wordList = []
+	    for w in words:
+                curPhon = w.phonology
+                for j in range(len(w.morphology)-1,-1,-1):
+                    aMorph = w.morphology[j][1]
+                    try:
+                        for side in testModel[aMorph]:
+                            for expon in testModel[aMorph][side]:
+                                if w.morphology in expon[1]:
+                                    if expon[0] == '':
+                                        pass
+                                    elif side == 's':
+                                        if len(expon[0]) != 0:
+                                            curPhon = curPhon[:-len(expon[0])]
+                                    elif side == 'p':
+                                        if len(expon[0]) != 0:
+                                            curPhon = curPhon[len(expon[0]):]
+                    except:
+                        break
+                wordList.append((curPhon,w.morphology))	    
+	    if debug:
+	        print 'Starting Report:'
+	        print morph
+	        print 'Base'
+                raw_input([IPAword(x[0]) for x in wordList])
+	    count = 0
+	    roots = []
+	    wordList_p = [tuple(IPAword(x[0])) for x in wordList]
+	    for word in set(wordList_p):
+		if wordList_p.count(word) > count:
+		    count = wordList_p.count(word)
+		    roots = [word]
+		elif wordList_p.count(word) == count:
+		    roots.append(word)
+	    if len(roots) > 1:
+		root = roots[randint(-1,len(roots)-1)]
+		testModel[morph]['b'] = [[IPA[c] for c in root],[x[1] for x in wordList]]
+		vocab.append(vocab_item(morph,[IPA[c] for c in root],'b',list(context)))
+	    else:
+		testModel[morph]['b'] = [[IPA[c] for c in roots[0]],[x[1] for x in wordList]]
+		vocab.append(vocab_item(morph,[IPA[c] for c in roots[0]],'b',list(context)))
     return vocab  
 
 def add_mprules(cModel,lexicon,setting,debug=True):
     '''adds morpho-phonological rules to models that fail to generate the data with only contextual allomorphy'''
     def check_vocab(vocab,lexicon):
-	problems = []
+	problems = set([])
         for type in lexicon.keys():
             for key in lexicon[type].keys():
                 for word in lexicon[type][key]:
                     morphs = tuple(y[1] for y in word.morphology)
-                    phonology = ''
+                    phonology = []
 		    item_list = []
-                    for morph_list in vocab:
-                        for item in morph_list:
-                            if (item.morph_feature in morphs) and (False not in list(x in set(item.context) for x in set(morphs)-set([item.morph_feature]))):
+		    for morph in morphs:
+                        for item in vocab:
+                            if (item.morph_feature == morph) and (False not in list(x in set(item.context) for x in set(morphs)-set([item.morph_feature]))):
                                 if item.exponent.side == 'b':
                                     phonology = item.exponent.phon
                                 elif item.exponent.side == 'p':
                                     phonology = item.exponent.phon + phonology
                                 elif item.exponent.side == 's':
                                     phonology = phonology + item.exponent.phon
-			        item_list.append(item)
+		                item_list.append(item)
                     if phonology != word.phonology:
-                        problems.append((phonology,word.phonology))
+                        problems.add((tuple(IPAword(phonology)),tuple(IPAword(word.phonology))))
+	print problems
         return problems
     mprules = []
     workingModel = create_mp_model(cModel,lexicon,setting,debug=True)
     problems = check_vocab(workingModel,lexicon)
     for problem in problems:
-	print generateProcesses(problem[0], problem[1])
+	print generateProcesses([IPA[c] for c in problem[0]], [IPA[c] for c in problem[1]])
 	#mprules.append(rule)
-    old_model = list(y for x in workingModel for y in x)
+    old_model = list(workingModel)
     if debug:
          for item in old_model:
              print 'Morphological Feature: ' + str(item.morph_feature)
