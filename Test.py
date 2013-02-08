@@ -20,7 +20,7 @@ if __name__ == '__main__':
 	print 'Model Number ' + str(i+1) + ':'
         for item in model.vocab:
             print 'Morphological Feature: ' + str(item.morph_feature)
-            print 'Phonology: ' + str(item.exponent.phon)
+            print 'Phonology: ' + ''.join(IPAword(item.exponent.phon))
             print 'Side: ' + str(item.exponent.side)
             print 'Context: ' + str(item.context)
 	print '\n\n' 
