@@ -8,10 +8,9 @@ def size_sort(ms):
 	for i in xrange(len(ms)):
 		model = ms[i]
 		length = 0
-		for x in model:
-			for morpheme in x[1]:
-				for side in morpheme[1]:
-					length = length + len(side[1])
+		for morpheme in model:
+			for side in morpheme[1]:
+				length = length + len(side[1])
 		try:
 			results[length-1].append(model)
 		except:

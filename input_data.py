@@ -35,10 +35,13 @@ class model(object):
         self.vocab = vocab
         self.mprules = mprules
 
-def Dictionaryify(input):
+def Dictionarify(input):
     lexicon = {} 
+    orderings = []
     for word in input:
+        ordering = []
         for morph in word.morphology:
+	    ordering.append(morph[0])
             try:
                 lexicon[morph[0]][morph[1]].append(word)
             except:
@@ -46,7 +49,19 @@ def Dictionaryify(input):
                     lexicon[morph[0]][morph[1]] = [word]
                 except:
                     lexicon[morph[0]] = {morph[1]:[word]}
-    return lexicon
+	for i in range(len(ordering)):
+	    try:
+		orderings[i].add(ordering[i])
+	    except:
+		def ord_app(orderings,i,ordering):
+		    orderings.append(set([]))
+		    try:
+	                orderings[i].add(ordering[i])
+        	    except:
+			ord_app(orderings,i,ordering)
+		    return orderings
+		ord_app(orderings,i,ordering)
+    return (lexicon,[tuple(x) for x in orderings])
 
 def find_common_substring(word_list):
     is_common_substr = lambda s, strings: all(''.join(s) in ''.join(x) for x in strings)
@@ -431,36 +446,30 @@ def add_mprules(cModel,lexicon,setting,debug=True):
     new_model = model(old_model,mprules)
     return new_model
 
-def create_model_space(lexicon, ordering):
-    listOfTypeModels = []
+def create_model_space2(lexicon,ordering):
+    morph_list = []
     for i in range(len(ordering)):
-        type = ordering[i]
-        listOfMorphs = []
-        for morph in lexicon[type]:
-	    print 'Morph: ' + morph
-            setOfTriggers = set(frozenset(lexicon[y].keys())
-                                for y in set(ordering) - set([type]))
-	    trueSet = set()
-            for x in set(product(set_combs(x) for x in setOfTriggers)):
-                trueSet.add(frozenset(frozenset(z for a in y for z in a) for y in set(product(x))))
-	    morphSet = []
-	    if i == 0:
-	        for x in trueSet:
-		   morphSet.append([morph,(('b',x),('p',frozenset([])),('s',frozenset([])))])
-	    else:
-	        for x in trueSet:
-		    for y in set_combs(x):
-	                if len(y) == 1:
-			    z = tuple(y)
-			    morphSet.append((morph,(('b',frozenset([])),('p',z[0]),('s',frozenset([])))))
-			    morphSet.append((morph,(('b',frozenset([])),('p',frozenset([])),('s',z[0]))))
-			elif len(y) == 2:
-			    z = tuple(y)
-                            morphSet.append((morph,(('b',frozenset([])),('p',z[0]),('s',z[1]))))
-                            morphSet.append((morph,(('b',frozenset([])),('p',z[1]),('s',z[0]))))
-	    listOfMorphs.append(tuple(morphSet))
-        listOfTypeModels.append(tuple(product_wbar([[type],tuple(product_wbar(listOfMorphs))])))
-    outStart = tuple(product_wbar(listOfTypeModels))
+	cur_order = ordering[i]
+	for cur_type in cur_order:
+	    for cur_morph in lexicon[cur_type].keys():
+		comb = set_combs(set(lexicon[cur_type][cur_morph]))
+		morphSet = []
+		if i == 0:
+		    for x in comb:
+   		        morphSet.append([cur_morph,(('b',x),('p',frozenset([])),('s',frozenset([])))])
+		else:
+		    for x in comb:
+			for y in set_combs(x):
+			    if len(y) == 1:
+                                z = tuple(y)
+				morphSet.append((cur_morph,(('b',frozenset([])),('p',frozenset([])),('s',z[0]))))
+                                morphSet.append((cur_morph,(('b',frozenset([])),('p',z[0]),('s',frozenset([])))))
+                            elif len(y) == 2:
+                                z = tuple(y)
+                                morphSet.append((cur_morph,(('b',frozenset([])),('p',z[0]),('s',z[1]))))
+                                morphSet.append((cur_morph,(('b',frozenset([])),('p',z[1]),('s',z[0]))))
+	        morph_list.append(morphSet)
+    outStart = tuple(product_wbar(morph_list))
     output = tuple(size_sort(outStart))
     return output
 
@@ -471,16 +480,15 @@ def check_vocab(vocab,lexicon):
                 morphs = tuple(y[1] for y in word.morphology)
                 phonology = []
 		item_list = []
-                for morph_list in vocab:
-                    for item in morph_list:
-                        if (item.morph_feature in morphs) and (False not in list(x in set(item.context) for x in set(morphs)-set([item.morph_feature]))):
-                            if item.exponent.side == 'b':
-                                phonology = item.exponent.phon
-                            elif item.exponent.side == 'p':
-                                phonology = item.exponent.phon + phonology
-                            elif item.exponent.side == 's':
-                                phonology = phonology + item.exponent.phon
-			    item_list.append(item)
+                for item in vocab:
+                    if (item.morph_feature in morphs) and (False not in list(x in set(item.context) for x in set(morphs)-set([item.morph_feature]))):
+                        if item.exponent.side == 'b':
+                            phonology = item.exponent.phon
+                        elif item.exponent.side == 'p':
+                            phonology = item.exponent.phon + phonology
+                        elif item.exponent.side == 's':
+                            phonology = phonology + item.exponent.phon
+			item_list.append(item)
                 if phonology != word.phonology:
                     return False
     return True
@@ -501,121 +509,99 @@ def build_models(modelSpace, lexicon, settings, mp = True):
         for i in xrange(len(modelSpace[compSize])):
             curModel = modelSpace[compSize][i]
             vocab = []
-            for j in range(len(curModel)):
-                curMorphType = curModel[j]
-                type = curMorphType[0]
-                for k in range(len(curMorphType[1])):
-                    curMorph = curMorphType[1][k]
-                    bSet = curMorph[1][0][1]
-		    pSet = curMorph[1][1][1]
-		    sSet = curMorph[1][2][1]
-                    morph = curMorph[0]
-                    if j == 0:
-                        for subSet in list(x for x in bSet):
-                            #raw_input(curMorph[1][1])
-                            words = [x.phonology for x in lexicon[type][morph] if set(set([y[1] for y in x.morphology])-set([morph])).issubset(subSet)]
-                            #print subSet
-                            #print str(list(set(set([y[1] for y in x.morphology])-set([morph])) for x in lexicon[type][morph]))
-                            #print find_common_substring([IPAword(x) for x in words]) 
-			    #raw_input([IPAword(x) for x in words])
-                            try:
-                                vocab[j].append(vocab_item(morph,[IPA[c] for c in find_common_substring([IPAword(x) for x in words])],'b',list(subSet)))
-                            except:
-                                vocab.append([vocab_item(morph,[IPA[c] for c in find_common_substring([IPAword(x) for x in words])],'b',list(subSet))])
-                    else:
-                        vocab.append([])
-                        for subSet in pSet:
-                            fullWords = [x for x in lexicon[type][morph] if set(set([y[1] for y in x.morphology])-set([morph])).issubset(set(subSet))]
-                            before = set([])
-                            after = set([])
-                            for word in fullWords:
-                                morphs = tuple(y[1] for y in word.morphology)
-                                phon = []
-                                for l in range(j):
-                                    for item in vocab[l]:
-                                        if (item.morph_feature in morphs) and (False not in list(x in set(item.context) for x in set(morphs)-set([item.morph_feature]))):
-                                            if item.exponent.side == 'b':
-                                                phon = item.exponent.phon
-                                            elif item.exponent.side == 'p':
-                                                phon = item.exponent.phon + phon
-                                            elif item.exponent.side == 's':
-                                                phon = phon + item.exponent.phon
-                                if phon != []:
-                                    splice_b = []
-                                    splice_a = []
-                                    store = []
-                                    found = 0
-                                    for l in range(len(word.phonology)):
-                                        x = word.phonology[l]
-                                        if found < len(phon):
-                                            if x == phon[found]:
-                                                store.append(x)
-                                                found = found + 1
-                                            else:
-                                                for y in store:
-                                                    splice_b.append(y)
-                                                found = 0
-                                                store = []
-                                                splice_b.append(x)
-                                        else:
-                                            splice_a.append(x)
+            for k in range(len(curModel)):
+                curMorph = curModel[k]
+                bSet = curMorph[1][0][1]
+	        pSet = curMorph[1][1][1]
+		sSet = curMorph[1][2][1]
+                morph = curMorph[0]
+                for subSet in list(x for x in bSet):
+                    words = [x.phonology for x in subSet]
+		    context = set([y[1] for x in subSet for y in x.morphology])-set([morph])
+                    vocab.append(vocab_item(morph,[IPA[c] for c in find_common_substring([IPAword(x) for x in words])],'b',list(context)))
+                for subSet in pSet:
+                    before = set([])
+                    after = set([])
+		    context = set([y[1] for x in subSet for y in x.morphology])-set([morph])
+                    for word in subSet:
+                        morphs = tuple(y[1] for y in word.morphology)
+                        phon = []
+                        for item in vocab:
+                            if (item.morph_feature in morphs) and (False not in list(x in set(item.context) for x in set(morphs)-set([item.morph_feature]))):
+                                if item.exponent.side == 'b':
+                                    phon = item.exponent.phon
+                                elif item.exponent.side == 'p':
+                                    phon = item.exponent.phon + phon
+                                elif item.exponent.side == 's':
+                                    phon = phon + item.exponent.phon
+                        if phon != []:
+                            splice_b = []
+                            splice_a = []
+                            store = []
+                            found = 0
+                            for l in range(len(word.phonology)):
+                                x = word.phonology[l]
+                                if found < len(phon):
+                                    if x == phon[found]:
+                                        store.append(x)
+                                        found = found + 1
+                                    else:
+                                        for y in store:
+                                            splice_b.append(y)
+                                        found = 0
+                                        store = []
+                                        splice_b.append(x)
                                 else:
-                                    splice_b = word.phonology
-                                    splice_a = word.phonology
-                                before.add(tuple(IPAword(splice_b)))
-                                after.add(tuple(IPAword(splice_a)))
-			    vocab[j].append(vocab_item(morph,[IPA[c] for c in find_common_prefix(before)],'p',list(subSet)))
-                        for subSet in sSet:
-                            fullWords = [x for x in lexicon[type][morph] if set(set([y[1] for y in x.morphology])-set([morph])).issubset(set(subSet))]
-                            before = set([])
-                            after = set([])
-                            for word in fullWords:
-                                morphs = tuple(y[1] for y in word.morphology)
-                                phon = ''
-                                for l in range(j):
-                                    for item in vocab[l]:
-                                        if (item.morph_feature in morphs) and (False not in list(x in set(item.context) for x in set(morphs)-set([item.morph_feature]))):
-                                            if item.exponent.side == 'b':
-                                                phon = item.exponent.phon
-                                            elif item.exponent.side == 'p':
-                                                phon = item.exponent.phon + phon
-                                            elif item.exponent.side == 's':
-                                                phon = phon + item.exponent.phon
-                                if phon != []:
-				    splice_b = []
-                                    splice_a = []
-                                    store = []
-                                    found = 0
-                                    for l in range(len(word.phonology)):
-				        x = word.phonology[l]
-				        if found < len(phon):
-			                    if x == phon[found]:
-			                        store.append(x)
-		                                found = found + 1
-			                    else:
-                        		        for y in store:
-		                                    splice_b.append(y)
-		                                found = 0
-                    			        store = []
-		                                splice_b.append(x)
-			                else:
-			                    splice_a.append(x)
-				else:
-                                    splice_b = word.phonology
-                                    splice_a = word.phonology
-                                before.add(tuple(IPAword(splice_b)))
-                                after.add(tuple(IPAword(splice_a)))
-			    vocab[j].append(vocab_item(morph,[IPA[c] for c in find_common_suffix(after)],'s',list(subSet)))
-                        #for key in vocab[j][-1].__dict__.keys():
-                        #    if key == 'exponent':
-                        #        for key2 in vocab[j][-1].exponent.__dict__.keys():
-                        #            print vocab[j][-1].exponent.__dict__[key2]
-                        #    else:
-                        #        print vocab[j][-1].__dict__[key]
-                        #raw_input(1)
+                                    splice_a.append(x)
+                        else:
+                            splice_b = word.phonology
+                            splice_a = word.phonology
+                        before.add(tuple(IPAword(splice_b)))
+                        after.add(tuple(IPAword(splice_a)))
+		    vocab.append(vocab_item(morph,[IPA[c] for c in find_common_prefix(before)],'p',list(context)))
+                for subSet in sSet:
+                    before = set([])
+                    after = set([])
+		    context = set([y[1] for x in subSet for y in x.morphology])-set([morph])
+                    for word in subSet:
+                        morphs = tuple(y[1] for y in word.morphology)
+                        phon = ''
+                        for item in vocab:
+                            if (item.morph_feature in morphs) and (False not in list(x in set(item.context) for x in set(morphs)-set([item.morph_feature]))):
+                                if item.exponent.side == 'b':
+                                    phon = item.exponent.phon
+                                elif item.exponent.side == 'p':
+                                    phon = item.exponent.phon + phon
+                                elif item.exponent.side == 's':
+                                    phon = phon + item.exponent.phon
+                        if phon != []:
+		            splice_b = []
+                            splice_a = []
+                            store = []
+                            found = 0
+                            for l in range(len(word.phonology)):
+			        x = word.phonology[l]
+			        if found < len(phon):
+			            if x == phon[found]:
+			                store.append(x)
+		                        found = found + 1
+			            else:
+                                        for y in store:
+		                            splice_b.append(y)
+		                        found = 0
+                    		        store = []
+		                        splice_b.append(x)
+			        else:
+			            splice_a.append(x)
+		        else:
+                            splice_b = word.phonology
+                            splice_a = word.phonology
+                        before.add(tuple(IPAword(splice_b)))
+                        after.add(tuple(IPAword(splice_a)))
+		    vocab.append(vocab_item(morph,[IPA[c] for c in find_common_suffix(after)],'s',list(context)))
             if check_vocab(vocab,lexicon):
                 sucess = sucess + 1
-                models.append(model(list(y for x in vocab for y in x),[]))
+                models.append(model(vocab,[]))
             else:
                 fail = fail + 1
 		if mp:
