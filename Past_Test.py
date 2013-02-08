@@ -1,7 +1,7 @@
 from input_data import *
 import string
 if __name__ == '__main__':
-    lexicon = Dictionaryify([
+    dic = Dictionaryify([
     word(r'rIN',[('ROOT','RING'),('TNS','PRS')]),
     word(r'r{\ae}N',[('ROOT','RING'),('TNS','PST')]),
     #word(r'sIN',[('ROOT','SING'),('TNS','PRS')]),
@@ -13,7 +13,8 @@ if __name__ == '__main__':
     word(r'brIN',[('ROOT','BRING'),('TNS','PRS')]),
     word(r'brat',[('ROOT','BRING'),('TNS','PST')]),
     ])
-    ordering = ['ROOT','TNS']
+    lexicon = dic[0]
+    ordering = dic[1]
     models = build_models(create_model_space(lexicon, ordering),lexicon,settings(1,1,3,2),mp=True)
     smallest = check_models(models,settings(1,1,3,2))
     for i in range(len(smallest)):

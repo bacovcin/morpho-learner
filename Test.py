@@ -1,7 +1,7 @@
 from input_data import *
 import string
 if __name__ == '__main__':
-    lexicon = Dictionaryify([
+    dic = Dictionaryify([
     word(r'arid',[('ROOT','RED'),('NUMBER','SG'),('GENDER','MASCULINE')]),
     word(r'rida',[('ROOT','RED'),('NUMBER','SG'),('GENDER','FEMININE')]),
     word(r'arud',[('ROOT','RED'),('NUMBER','PL'),('GENDER','MASCULINE')]),
@@ -11,7 +11,8 @@ if __name__ == '__main__':
     word(r'ablk',[('ROOT','WHITE'),('NUMBER','PL'),('GENDER','MASCULINE')]),
     word(r'blka',[('ROOT','WHITE'),('NUMBER','PL'),('GENDER','FEMININE')]),
     ])
-    ordering = ['ROOT','NUMBER','GENDER']
+    lexicon = dic[0]
+    ordering = dic[1]
     models = build_models(create_model_space(lexicon, ordering),lexicon,settings(1,1,3,2),mp=False)
     smallest = check_models(models,settings(1,1,3,2))
     for i in range(len(smallest)):

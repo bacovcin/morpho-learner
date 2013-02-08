@@ -35,13 +35,9 @@ class model(object):
         self.vocab = vocab
         self.mprules = mprules
 
-def Dictionarify(input):
+def Dictionaryify(input):
     lexicon = {} 
-<<<<<<< HEAD
     orderings = []
-=======
-    orderings = {}
->>>>>>> experimental
     for word in input:
         ordering = []
         for morph in word.morphology:
@@ -53,7 +49,6 @@ def Dictionarify(input):
                     lexicon[morph[0]][morph[1]] = [word]
                 except:
                     lexicon[morph[0]] = {morph[1]:[word]}
-<<<<<<< HEAD
 	for i in range(len(ordering)):
 	    try:
 		orderings[i].add(ordering[i])
@@ -67,16 +62,6 @@ def Dictionarify(input):
 		    return orderings
 		ord_app(orderings,i,ordering)
     return (lexicon,[tuple(x) for x in orderings])
-=======
-	cur_ord = orderings
-	for order in ordering:
-	    try:
-		cur_ord = cur_ord[order]
-	    except:
-		cur_ord[order] = {}
-		cur_ord = cur_ord[order]
-    return (lexicon,orderings)
->>>>>>> experimental
 
 def find_common_substring(word_list):
     is_common_substr = lambda s, strings: all(''.join(s) in ''.join(x) for x in strings)
@@ -461,13 +446,8 @@ def add_mprules(cModel,lexicon,setting,debug=True):
     new_model = model(old_model,mprules)
     return new_model
 
-<<<<<<< HEAD
-def create_model_space2(lexicon,ordering):
-    morph_list = []
-=======
 def create_model_space(lexicon,ordering):
-    listOfTypeModels = []
->>>>>>> experimental
+    morph_list = []
     for i in range(len(ordering)):
 	cur_order = ordering[i]
 	for cur_type in cur_order:
@@ -491,10 +471,6 @@ def create_model_space(lexicon,ordering):
 	        morph_list.append(morphSet)
     outStart = tuple(product_wbar(morph_list))
     output = tuple(size_sort(outStart))
-    for x in output:
-	for y in x:
-	    print y
-    raw_input()
     return output
 
 def check_vocab(vocab,lexicon):
