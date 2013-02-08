@@ -10,14 +10,77 @@ from IPA import *
 from copy import deepcopy
 
 class MPrule:
-    def __init__(self):
-        self._data = {} #_data has pairs of X:Y where MP rule changes X to Y
-        self._rule = None #_rule will be active rule
-        self._possiblerules = []  #possible rules consistent with data
+    def __init__(self, data = {}, possiblerules = []):
+        self._data = data #_data has pairs of X:Y:D where MP rule changes X to Y with D as Levenshtein matrix
+        self._possiblerules = possiblerules  #possible rules consistent with data
+        '''a rule is a list of processes (so multiple changes in one rule can happen), 
+        each item in the list is a tuple (T,C,L) where T is type of change (ins, del, featch)
+        C is the affected change and L is the location.
+        L is list of possible tuple (type,side,dir,feats)
+        In cases where multiple rules apply, the list is critically ordered'''
+    def applyrule(self, rule, form):
+#        for process in rule:
+#            if rule[0] == 'ins':
+#                #find place L and insert segment in C
+#            elif rule[0] == 'del':
+#                #find segment C or place L and delete it
+#            elif rule[0] == 'featch':
+#                #find segment and affect change
+            
+        pass
+
         
+            
+    def checkadd(self, newdata):
+        '''newdata formatted (x,y) where x -> y
+        checks all possible rules in this MP, winnows down to possible rules that fit this data as well
+        or returns False if not possible'''
+        # Need to have the ability to change restrictions on features if they match
+        # note that the place restrictions are supersets?? of possible restrictions
+        testingrules = self._possiblerules
+        for rule in testingrules:
+            if applyrule(rule, newdata[0]) != newdata[1]:
+                testingrules.remove(rule)
+        if len(testingrules) > 0:
+            self._possiblerules = testingrules
+            return True
+        else:
+            return False
+                
+def interpretrule(ruleset):
+    for i, rule in enumerate(ruleset):
+        humanreadable = str(i) + ") "
+        if rule[0] == "ins": humanreadable += "insert "
+        elif rule[0] == "del": humanreadable += "delete "
+        elif rule[0] == "featch": humanreadable += "change to "
+        else: raise TypeError("Rule type not ins, del, or featch: ", rule)
         
-def featureDifference(x,y, toprint = False):
-    '''Takes two phonemes and returns difference in features to change X into Y'''
+        if rule[0] == "ins": 
+            rule[1] = "/" + IPA[rule[1]] + "/"
+            
+        humanreadable += str(rule[1]) + "\n"
+        
+        #where
+        i = 0
+        for location in rule[2]:
+            i += 1
+            humanreadable += "   " + chr(i+96) + ". "
+            if location[0] == 'abs':
+                humanreadable += str(location[3]) + " segs"
+            elif location[0] == 'rel':
+                if location[1] != 'none':
+                    humanreadable += location[1] + " of "
+                humanreadable += "first {" + FeatureRepr(location[3]) + "}" + " from " + location[2]    + "\n"
+                humanreadable += "       = first " + str(subset(FeatureRepr(location[3])))
+            else: raise TypeError("Location type not abs or rel: ", location)
+            humanreadable += " from " + location[2]    + "\n"
+        print humanreadable            
+        
+def featureDifference(x,y, raw = False, toprint = False, list = False, debug=False):
+    '''Takes two phonemes and returns difference in features to change X into Y
+    If list = True, it returns the list of changed features, otherwise it returns a number
+    If raw == True, it return all changed features, otherwise it returns a modified
+    set taking into consideration Feature geometry.'''
     if not isinstance(x, Phoneme):
         raise TypeError(x + " is not a Phoneme")
     if not isinstance(y, Phoneme):
@@ -26,12 +89,66 @@ def featureDifference(x,y, toprint = False):
     for feature in x._features.keys():
         if x[feature] != y[feature]:
             diff[feature] = y[feature]
-    if toprint:
-        return FeatureRepr(diff)
-    return diff
-    
+    if raw and list:
+        if toprint:
+            return FeatureRepr(diff)
+        return diff
+    elif raw:
+        return len(diff)
+    else:
+        #Skeletal features (syll) are hardest to change
+        #Root node features (cons, son) are hard to change
+        #Major articulators (lab, cor, dors, TR) are next
+        # Where should manner features go?
+        #Minor place features laryngeal features are easiest
+        
+        skel_weight = 1000
+        root_weight = 100
+        major_weight = 10
+        minor_weight = 1
+        
+        skel = ['syll']
+        root = ['cons', 'son']
+        major = ['lab', 'cor', 'dors', 'TR']
+        
+        manner = ['cont', 'lat', 'nas', 'strid', 'del_rel']
+        major.extend(manner)
+        
+        
+#        '''Assumes -cor -> 0ant, 0dist
+#        Assumes -dors -> 0high, 0back, 0low, 0front, 0tense 
+#        Assumes -lab -> 0round'''
+#        placenodes = {'lab':['round'], 'dors':['high', 'back', 'low', 'front', 'tense'],
+#                      'cor':['ant', 'dist']}
+#        for feat in placenodes.keys():
+#            if feat in diff.keys() and diff[feat] in [Feature.Minus, Feature.NotSpecified, Feature.Any]:
+#                for subfeat in placenodes[feat]:
+#                    del diff[subfeat]
+
+
+        # Changes:  changing to or from nasal shouldn't count as +/- sonorant as well, since sonorant has a high weight
+        #            but the change from stop to nasal is pretty natural
+        
+        n = 0
+        for feat in diff.keys():
+            # Special Cases:  
+            #1) changing to or from nasal shouldn't count as +/- sonorant as well, since sonorant has a high weight
+            #but the change from stop to nasal is pretty natural
+            if feat == 'son' and 'nas' in diff.keys():
+                n = n
+            # Normal Cases:
+            elif feat in skel: n = n + skel_weight
+            elif feat in root: n = n + root_weight
+            elif feat in major: n = n + major_weight
+            else: n = n + minor_weight
+                    
+        if debug: print IPA[x], ">", IPA[y], "=>", FeatureRepr(diff), "::", n
+        
+        return n
+                
     
 def SideofDirFeats(side, dir, s, index, debug=False):
+    
     Feats = {}
     
     if side == "left":
@@ -58,16 +175,16 @@ def SideofDirFeats(side, dir, s, index, debug=False):
             for feat in OnlyPlusMinus:
                 Feats[feat] = s[index][feat]
         except AttributeError: 
-	    pass #s[index-1] == "_"
+            pass #?? s[index] == "_"
     else:
         raise Exception("Side is not left, right, or none: ", side)
     
     if debug: print "Initial Feats", side, dir, Feats
     
-    
     if dir == "left":
-        for i in range(0, index-2):
+        for i in range(index-1, -1, -1):
             #from left
+            #print "L>>>", i, IPA[s[i]]
             try:
                 for feature in s[i]._features.keys():
                     if feature in Feats:
@@ -76,28 +193,67 @@ def SideofDirFeats(side, dir, s, index, debug=False):
             except AttributeError:
                 pass # s[i] == "_"
     elif dir == "right":
-        for i in range(len(s)-1, index+2, -1):
+        for i in range(index+1, len(s)):
             #from right
+            #print "R>>>", i, IPA[s[i]]
             try:
                 for feature in s[i]._features.keys():
                     if feature in Feats:
+                        #print feature, Feats[feature], s[i][feature]
                         if s[i][feature] == Feats[feature]:
                             del Feats[feature]
             except AttributeError:
                 pass # s[i] == "_"
+            #print Feats
     else:
         raise Exception("Direction is not left or right: ", dir)
     
     return Feats
    
+def findwhereDel(s, index, debug=False):
+    '''Find where/what segment is deleted'''
 
-def findwhereInsDel(s, index, debug = False):
-    '''Find where a segment is inserted or deleted'''
+
+    # Where:
+    #  N segments from R or L
+    #  before/after segment with features [X]
+    #  First segment of type [X] fron R or L 
+
+    s = filter(lambda x: x!="_", s)
+    absPosL = index
+    absPosR = len(s) - (index + 1)
+    
+    #From L, to left or right of first [X]
+    #From R, to left or right of first [X]
+
+    
+    RightofLeftFeats = SideofDirFeats("right", "left", s, index) #To right of first X from left
+    LeftofRightFeats = SideofDirFeats("left", "right", s, index) #To left of first X from right
+    RightofRightFeats = SideofDirFeats("right", "right", s, index)
+    LeftofLeftFeats = SideofDirFeats("left", "left", s, index)
+                       
+                    
+    
+    if debug: print "RL", RightofLeftFeats
+    if debug: print "LR", LeftofRightFeats
+    if debug: print "LL", LeftofLeftFeats
+    if debug: print "RR", RightofRightFeats
+    
+    firstR = SideofDirFeats("none", "right", s, index)
+    firstL = SideofDirFeats("none", "left", s, index)
+    
+    # absolute position L, R
+    # R of first [X] from L,  L of first [X] from R
+    # R of first [X] from R, L of first [X] from L
+    return (absPosL, absPosR, RightofLeftFeats, LeftofRightFeats, RightofRightFeats, LeftofLeftFeats, firstL, firstR)
+
+def findwhereIns(s, index, debug = False):
+    '''Find where a segment is inserted'''
     # Where:
     #  N segments from R or L
     #  before/after segment with features [X]
     #  Syll structure?
-    #s = filter(lambda x: x!="_", s)
+    s = filter(lambda x: x!="_", s)
     absPosL = index
     absPosR = len(s) - (index + 1)
     
@@ -124,21 +280,12 @@ def findwhereInsDel(s, index, debug = False):
         
 def findwhereFeatChange(s, index, debug=False):
     '''Find which segment undergoes feature change'''
-    new_s = s
-#    new_s = []
-#    subnum = 0
-#    for i in xrange(len(s)):
-#	if s[i] == "_":
-#	    if i < index:
-#		subnum = subnum + 1
-#	else:
-#	    new_s.append(s[i])
-    #index = index - subnum
+    s = filter(lambda x: x!="_", s)
     absPosL = index
     absPosR = len(s) - (index + 1)
     
-    Left = SideofDirFeats("none", "left", new_s, index)
-    Right = SideofDirFeats("none", "right", new_s, index)
+    Left = SideofDirFeats("none", "left", s, index)
+    Right = SideofDirFeats("none", "right", s, index)
     
     return (absPosL, absPosR, Left, Right)
     
@@ -155,12 +302,12 @@ def StrAlign(s1, s2, debug=False):
     
     #deletion and addition scores should penalize segment deletion and addition
     # Positive scores will create all deletion/addition solutions
-    deletion_weight = -3
-    addition_weight = -3
+    deletion_weight = -10
+    addition_weight = -10
     
     #match weight should boost perfect matches
     #high match_weight will choose more matches (even with feature differences)
-    match_weight = 9
+    match_weight = 70
     #if match_weight is lower in magnitude than add/del weight, wonky things happen
     
     
@@ -170,7 +317,7 @@ def StrAlign(s1, s2, debug=False):
     # higher magnitude means feature difference is less likely to match
     # lower magnitude means feature difference is more likely to match 
     # positive is wonky
-    featurediff_weight = -2
+    featurediff_weight = -30
     
     D[0][0] = 0
     
@@ -188,7 +335,7 @@ def StrAlign(s1, s2, debug=False):
             #match score is function of feature difference
             #match_score = +match_weight
             match_score = \
-                featurediff_weight*len(featureDifference(s1[j-1],s2[i-1]))\
+                featurediff_weight*featureDifference(s1[j-1],s2[i-1], debug=debug)\
                         + match_weight
             
             match = D[i-1][j-1] + match_score
@@ -254,7 +401,7 @@ def StrAlign(s1, s2, debug=False):
     
     return (s1aln, s2aln, D)
     
-def generateProcesses(input, output):
+def generateProcesses(input, output, debug=False):
     '''Takes two strings and returns possible processes to convert str1 to str2'''
     # What:
     #  Insert X
@@ -265,75 +412,138 @@ def generateProcesses(input, output):
     #  Nth segment with features [X] from R or L
     #  before/after segment with features [X]
     #  Syll structure?
-    alignment = StrAlign(input, output, debug=True)
+    alignment = StrAlign(input, output, debug=debug)
     s1aln = alignment[0]
     s2aln = alignment[1]
     D = alignment[2]
     
     assert len(s1aln) == len(s2aln) #otherwise something is wrong with alignment
     
-    changes = []
-    
     word = s1aln
     
     
-    print "START:", IPAword(filter(lambda x: x!= "_", word))
+    processes = []
+    
+    if debug: print "START:", IPAword(filter(lambda x: x!= "_", word))
     #Find optimal processes:
     for i in range(len(s1aln)):
+        '''a rule is a list of processes (so multiple changes in one rule can happen), 
+        each item in the list is a tuple (T,C,L) where T is type of change (ins, del, featch)
+        C is the affected change and L is the location.
+        L is list of possible tuple (type,side,dir,feats)  type is 'abs' or 'rel'
+        In cases where multiple rules apply, the list is critically ordered'''
+        thisprocess = [None, None, None]
         if s1aln[i] == s2aln[i]:
             pass # it is a match
         elif s1aln[i] == '_':
+            thisprocess[0] = 'ins'
+            thisprocess[1] = s2aln[i]
+            locations = []
             #it is an insertion
-            where = findwhereInsDel(s2aln, i)
+            where = findwhereIns(s2aln, i)
             
                     # absolute position L, R
                     # R of first [X] from L,  L of first [X] from R
                     # R of first [X] from R, L of first [X] from L
     
-            print "insert /"+ IPA[s2aln[i]] + "/ :"
-            print "   ", where[0], "segs from left"
-            print "   ", where[1], "segs from right"
+            if debug: print "insert /"+ IPA[s2aln[i]] + "/ :"
+            if debug: print "   ", where[0], "segs from left"
+            locations.append(['abs', 'none', 'left', where[0]])
+            if debug: print "   ", where[1], "segs from right"
+            locations.append(['abs', 'none', 'right', where[1]])
             if where[2] != {}:
-                print "    R of first", (where[2]), "from left"
+                if debug: print "    R of first", (where[2]), "from left"
+                locations.append(['rel', 'right', 'left', where[2]])
             if where[3] != {}:
-                print "    L of first", (where[3]), "from right"
+                if debug: print "    L of first", (where[3]), "from right"
+                locations.append(['rel', 'left', 'right', where[3]])
             if where[4] != {}:
-                print "    R of first", (where[4]), "from right"
+                if debug: print "    R of first", (where[4]), "from right"
+                locations.append(['rel', 'right', 'left', where[4]])
             if where[5] != {}:
-                print "    L of first", (where[5]), "from left"
+                if debug: print "    L of first", (where[5]), "from left"
+                locations.append(['rel', 'left', 'left', where[5]])
             word[i] = s2aln[i]
-            print IPAword(filter(lambda x: x!= "_", word))
+            if debug: print IPAword(filter(lambda x: x!= "_", word))
+            thisprocess[2] = locations
+            processes.append(thisprocess)
         elif s2aln[i] == '_':
             #it is a deletion
-            print findwhereInsDel(s1aln, i)
+            thisprocess[0] = 'del'
+            thisprocess[1] = '' # you don't know what to delete!
+            locations = []
+            
+            where = findwhereDel(s1aln, i)
+            
+            if debug: print "Delete /"+ IPA[s1aln[i]] + "/ :"
+            if debug: print "   ", where[0], "segs from left"
+            locations.append(['abs', 'none', 'left', where[0]])
+            if debug: print "   ", where[1], "segs from right"
+            locations.append(['abs', 'none', 'right', where[1]])
+            if where[2] != {}:
+                if debug: print "    R of first", (where[2]), "from left"
+                locations.append(['rel', 'right', 'left', where[2]])
+            if where[3] != {}:
+                if debug: print "    L of first", (where[3]), "from right"
+                locations.append(['rel', 'left', 'right', where[3]])
+            if where[4] != {}:
+                if debug: print "    R of first", (where[4]), "from right"
+                locations.append(['rel', 'right', 'right', where[4]])
+            if where[5] != {}:
+                if debug: print "    L of first", (where[5]), "from left"
+                locations.append(['rel', 'left', 'left', where[5]])
+            if where[6] != {}:
+                if debug: print "    first", (where[6]), "from left"
+                locations.append(['rel', 'none', 'left', where[6]])
+            if where[7] != {}:
+                if debug: print "    first", (where[7]), "from right"
+                locations.append(['rel', 'none', 'right', where[7]])
             
             word[i] = s2aln[i]
-            print IPAword(filter(lambda x: x!= "_", word))
+            if debug: print IPAword(filter(lambda x: x!= "_", word))
+            
+            thisprocess[2] = locations
+            processes.append(thisprocess)
+            
         else:
             #it is a feature change
-          
+            thisprocess[0] = 'featch'
+            thisprocess[1] = featureDifference(s1aln[i], s2aln[i], raw = True, list = True, toprint=True)
+            locations = []
             #where?
             where = findwhereFeatChange(s1aln, i)
-            print "change to ", featureDifference(s1aln[i], s2aln[i], toprint=True),
-            print "( /"+ IPA[s1aln[i]]+ "/ > /"+ IPA[s2aln[i]] + "/ )"
-            print "   ", where[0], "segs from left"
-            print "   ", where[1], "segs from right"
+            if debug: print "change to ", featureDifference(s1aln[i], s2aln[i], raw = True, list = True, toprint=True),
+            if debug: print "( /"+ IPA[s1aln[i]]+ "/ > /"+ IPA[s2aln[i]] + "/ )"
+            if debug: print "   ", where[0], "segs from left"
+            locations.append(['abs', 'none', 'left', where[0]])
+            if debug: print "   ", where[1], "segs from right"
+            locations.append(['abs', 'none', 'right', where[1]])
             if where[2] != {}:
-                print "    first", (where[2]), "from left"
+                if debug: print "    first", (where[2]), "from left"
+                locations.append(['rel', 'none', 'left', where[2]])
             if where[3] != {}:
-                print "    first", (where[3]), "from right"
+                if debug: print "    first", (where[3]), "from right"
+                locations.append(['rel', 'none', 'right', where[3]])
                 
             word[i] = s2aln[i]
-            print IPAword(filter(lambda x: x!= "_", word))
+            if debug:  print IPAword(filter(lambda x: x!= "_", word))
+            
+            thisprocess[2] = locations
+            processes.append(thisprocess)
     #Find other processes:
         
+    return processes
+    
+def MultiplePairTest(list):
+    '''test multiple pairs of strings.  list should be list of tuples a>b.  a and b need to be r'strings' '''
+    for (a,b) in list:
+        print a, " > ", b
+        interpretrule(generateProcesses(PhonParse(a), PhonParse(b)))
     return None
     
-
-
 if __name__ == "__main__":
-    # 4 and 0 and 1 an 13
     #print len(featureDifference(IPA['u'], IPA['P']))
-    #print generateProcesses(PhonParse(r'sIN'), PhonParse(r'sUN'))#"sing", "gesang")
-    print generateProcesses(PhonParse(r'paterej'), PhonParse(r'patrej'))
+    MultiplePairTest([(r'pater',r'patr'), (r'iken', r'ikn'), (r'wOk', r'wOkt'), 
+                      (r'fil', r'felt'), (r'oae', r'oe')])
+    #generateProcesses(PhonParse(r'oae'), PhonParse(r'oe'), debug=True)
 
