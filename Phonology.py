@@ -124,12 +124,21 @@ def findwhereInsDel(s, index, debug = False):
         
 def findwhereFeatChange(s, index, debug=False):
     '''Find which segment undergoes feature change'''
-    #s = filter(lambda x: x!="_", s)
+    new_s = s
+#    new_s = []
+#    subnum = 0
+#    for i in xrange(len(s)):
+#	if s[i] == "_":
+#	    if i < index:
+#		subnum = subnum + 1
+#	else:
+#	    new_s.append(s[i])
+    #index = index - subnum
     absPosL = index
     absPosR = len(s) - (index + 1)
     
-    Left = SideofDirFeats("none", "left", s, index)
-    Right = SideofDirFeats("none", "right", s, index)
+    Left = SideofDirFeats("none", "left", new_s, index)
+    Right = SideofDirFeats("none", "right", new_s, index)
     
     return (absPosL, absPosR, Left, Right)
     
@@ -326,5 +335,5 @@ if __name__ == "__main__":
     # 4 and 0 and 1 an 13
     #print len(featureDifference(IPA['u'], IPA['P']))
     #print generateProcesses(PhonParse(r'sIN'), PhonParse(r'sUN'))#"sing", "gesang")
-    print generateProcesses(PhonParse(r'patreys'), PhonParse(r'pater'))
+    print generateProcesses(PhonParse(r'paterej'), PhonParse(r'patrej'))
 
