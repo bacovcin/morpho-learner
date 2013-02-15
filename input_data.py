@@ -25,13 +25,14 @@ class vocab_item(object):
         self.context = context                   #when to use this item
         
 class settings(object):
-    def __init__(self, length, phon, nat, exponnum, burnin, chainlen):
+    def __init__(self, length, phon, nat, exponnum, burnin, chainlen, chainnum):
         self.vlength = length         #weight of the list length penalty
         self.phon = phon              #weight of the phonology vs. allomorphy 
         self.natural = nat            #maximum number of feature changes in a 'natural' change
 	self.erat = exponnum	      #minimum number of forms that need to share an exponent for it to be used
 	self.chainlen = chainlen      #number of iterations in the Markov chain
-	self.burnin = burnin
+	self.burnin = burnin	      #number of iterations before saving any data
+	self.chainnum = chainnum      #number of chains to run
 
 class model(object):
     def __init__(self, vocab, mprules):
@@ -472,95 +473,97 @@ def build_model(curModel, lexicon):
     return vocab
 
 def build_models(modelSpace, lexicon, settings, mp = True):
-    models = []
-    curModelShape = []
-    for morph in modelSpace:
-	curModelShape.append(morph[randint(0,len(morph)-1)])
-    curVocab = build_model(curModelShape,lexicon)
-    curVocValue = len(check_vocab(curVocab,lexicon))
-    if curVocValue > 0:
-	if mp == True:
-	    curModel = add_mprules(curModelShape,lexicon,settings)
-	    curValue = (len(curModel.vocab)*settings.vlength) + rule_eval(curModel.mprules)
-	else:
+    chains = []
+    for j in xrange(settings.chainnum):
+	chains.append([])
+        curModelShape = []
+        for morph in modelSpace:
+	    curModelShape.append(morph[randint(0,len(morph)-1)])
+        curVocab = build_model(curModelShape,lexicon)
+        curVocValue = len(check_vocab(curVocab,lexicon))
+        if curVocValue > 0:
+	    if mp == True:
+	        curModel = add_mprules(curModelShape,lexicon,settings)
+	        curValue = (len(curModel.vocab)*settings.vlength) + rule_eval(curModel.mprules)
+	    else:
+	        curModel = model(curVocab,[])
+	        curValue = (len(curModel.vocab)*settings.vlength)+(curVocValue * 5)
+        else:
 	    curModel = model(curVocab,[])
 	    curValue = (len(curModel.vocab)*settings.vlength)+(curVocValue * 5)
-    else:
-	curModel = model(curVocab,[])
-	curValue = (len(curModel.vocab)*settings.vlength)+(curVocValue * 5)
-    widgets = ['Burning in chain: ',
+        widgets = ['Burning-in Chain ' + str(j + 1) + ': ',
                 Percentage(), ' ', Bar(marker=RotatingMarker()),' ', ETA()]
-    pbar = ProgressBar(widgets=widgets,maxval=settings.burnin).start()
-    for i in range(settings.burnin):
-	newModelShape = curModelShape
-	while 1==1:
-            changeMorph = randint(0,len(modelSpace)-1)
-            typeComp = random()
-	    option = list(newModelShape)
-            option[changeMorph] = modelSpace[changeMorph][randint(0,len(modelSpace[changeMorph])-1)]
-	    if option != newModelShape:
-		newModelShape = option
-		break
-	newVocab = build_model(newModelShape,lexicon)
-        newVocValue = len(check_vocab(newVocab,lexicon))
-	newValue = 0
-        for item in newVocab:
-            if item.exponent.side == 'b':
-                newValue = newValue + 50*settings.vlength
-            else:
-                newValue = newValue + 5*settings.vlength
-        if newVocValue > 0:
-            if mp == True:
-                newModel = add_mprules(newModelShape,lexicon,settings)
-                newValue = (len(newModel.vocab)*settings.vlength) + rule_eval(newModel.mprules)
+        pbar = ProgressBar(widgets=widgets,maxval=settings.burnin).start()
+        for i in range(settings.burnin):
+	    newModelShape = curModelShape
+	    while 1==1:
+                changeMorph = randint(0,len(modelSpace)-1)
+                typeComp = random()
+	        option = list(newModelShape)
+                option[changeMorph] = modelSpace[changeMorph][randint(0,len(modelSpace[changeMorph])-1)]
+	        if option != newModelShape:
+		    newModelShape = option
+		    break
+	    newVocab = build_model(newModelShape,lexicon)
+            newVocValue = len(check_vocab(newVocab,lexicon))
+	    newValue = 0
+            for item in newVocab:
+                if item.exponent.side == 'b':
+                    newValue = newValue + 50*settings.vlength
+                else:
+                    newValue = newValue + 5*settings.vlength
+            if newVocValue > 0:
+                if mp == True:
+                    newModel = add_mprules(newModelShape,lexicon,settings)
+                    newValue = (len(newModel.vocab)*settings.vlength) + rule_eval(newModel.mprules)
+                else:
+                    newModel = model(newVocab,[])
+                    newValue = newValue+(newVocValue * 50)
             else:
                 newModel = model(newVocab,[])
                 newValue = newValue+(newVocValue * 50)
-        else:
-            newModel = model(newVocab,[])
-            newValue = newValue+(newVocValue * 50)
-        if (curValue >= newValue) or (.01*(random() < (float(newValue)/float(curValue)))):
-	    curModelShape = newModelShape
-	    curModel = newModel
-	    curValue = newValue
-	pbar.update(i+1)
-    pbar.finish()
-    widgets = ['Running Chain: ',
+            if (curValue >= newValue) or (.01*(random() < (float(newValue)/float(curValue)))):
+	        curModelShape = newModelShape
+	        curModel = newModel
+	        curValue = newValue
+	    pbar.update(i+1)
+        pbar.finish()
+        widgets = ['Running Chain ' + str(j + 1) + ': ',
                 Percentage(), ' ', Bar(marker=RotatingMarker()),' ', ETA()]
-    pbar = ProgressBar(widgets=widgets,maxval=settings.chainlen).start()
-    for i in range(settings.chainlen):
-	newModelShape = curModelShape
-	while 1==1:
-            changeMorph = randint(0,len(modelSpace)-1)
-            typeComp = random()
-            option = list(newModelShape)
-            option[changeMorph] = modelSpace[changeMorph][randint(0,len(modelSpace[changeMorph])-1)]
-            if option != newModelShape:
-                newModelShape = option
-                break
-	newVocab = build_model(newModelShape,lexicon)
-        newVocValue = len(check_vocab(newVocab,lexicon))
-	newValue = 0
-	for item in newVocab:
-	    if item.exponent.side == 'b':
-		newValue = newValue + 50*settings.vlength
-	    else:
-		newValue = newValue + 5*settings.vlength
-        if newVocValue > 0:
-            if mp == True:
-                newModel = add_mprules(newModelShape,lexicon,settings)
-                newValue = (len(newModel.vocab)*settings.vlength) + rule_eval(newModel.mprules)
+        pbar = ProgressBar(widgets=widgets,maxval=settings.chainlen).start()
+        for i in range(settings.chainlen):
+	    newModelShape = curModelShape
+	    while 1==1:
+                changeMorph = randint(0,len(modelSpace)-1)
+                typeComp = random()
+                option = list(newModelShape)
+                option[changeMorph] = modelSpace[changeMorph][randint(0,len(modelSpace[changeMorph])-1)]
+                if option != newModelShape:
+                    newModelShape = option
+                    break
+	    newVocab = build_model(newModelShape,lexicon)
+            newVocValue = len(check_vocab(newVocab,lexicon))
+	    newValue = 0
+	    for item in newVocab:
+	        if item.exponent.side == 'b':
+		    newValue = newValue + 50*settings.vlength
+	        else:
+		    newValue = newValue + 5*settings.vlength
+            if newVocValue > 0:
+                if mp == True:
+                    newModel = add_mprules(newModelShape,lexicon,settings)
+                    newValue = (len(newModel.vocab)*settings.vlength) + rule_eval(newModel.mprules)
+                else:
+                    newModel = model(newVocab,[])
+                    newValue = newValue+(newVocValue * 50)
             else:
                 newModel = model(newVocab,[])
                 newValue = newValue+(newVocValue * 50)
-        else:
-            newModel = model(newVocab,[])
-            newValue = newValue+(newVocValue * 50)
-	if (curValue >= newValue) or (random() < (.01*(float(newValue)/float(curValue)))):
-	    curModelShape = newModelShape
-	    curModel = newModel
-	    curValue = newValue
-	models.append(curModel)
-        pbar.update(i+1)
+	    if (curValue >= newValue) or (random() < (.01*(float(newValue)/float(curValue)))):
+	        curModelShape = newModelShape
+	        curModel = newModel
+	        curValue = newValue
+	    chains[-1].append(curModel)
+            pbar.update(i+1)
     pbar.finish()
-    return models
+    return chains
