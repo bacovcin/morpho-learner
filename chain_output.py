@@ -1,4 +1,5 @@
 import string
+from Phonology import *
 
 def printChains(chains):
     valid_models = []
