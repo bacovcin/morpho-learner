@@ -1,6 +1,6 @@
 import string
 
-def printChains(chains)
+def printChains(chains):
     chains = build_models(create_model_space(lexicon, ordering),lexicon,setting,mp=False)
     valid_models = []
     for models in chains:
