@@ -24,11 +24,13 @@ class vocab_item(object):
         self.context = context                   #when to use this item
         
 class settings(object):
-    def __init__(self, length, phon, nat, exponnum):
+    def __init__(self, length, phon, nat, exponnum, bchange, chainlen):
         self.vlength = length         #weight of the list length penalty
         self.phon = phon              #weight of the phonology vs. allomorphy 
         self.natural = nat            #maximum number of feature changes in a 'natural' change
 	self.erat = exponnum	      #minimum number of forms that need to share an exponent for it to be used
+	self.bchange = bchange	      #% of time a model which is locally inferior is kept
+	self.chainlen = chainlen      #number of iterations in the Markov chain
 
 class model(object):
     def __init__(self, vocab, mprules):
@@ -371,8 +373,7 @@ def create_model_space(lexicon,ordering):
                                 morphSet.append((cur_morph,(('b',frozenset([])),('p',z[0]),('s',z[1]))))
                                 morphSet.append((cur_morph,(('b',frozenset([])),('p',z[1]),('s',z[0]))))
 	        morph_list.append(morphSet)
-    outStart = tuple(product_wbar(morph_list))
-    output = tuple(size_sort(outStart))
+    output = size_sort(morph_list)
     return output
 
 def check_vocab(vocab,lexicon):
@@ -402,14 +403,15 @@ def build_models(modelSpace, lexicon, settings, mp = True):
     compSize = -1
     while sucess == 0:
 	compSize = compSize + 1
-	widgets = ['Section ' + str(compSize) + ' out of ' + str(len(modelSpace)) + ': ',
+	curModelSpace = sized_model(modelSpace,compSize)
+	widgets = ['Section ' + str(compSize) + ': ',
                         Percentage(), ' ', Bar(marker=RotatingMarker()),' ', ETA()]
         try:
-            pbar = ProgressBar(widgets=widgets,maxval=len(modelSpace[compSize])).start()
+            pbar = ProgressBar(widgets=widgets,maxval=len(curModelSpace)).start()
 	except:
 	    pbar = ProgressBar(widgets=widgets,maxval=1).start()
-        for i in xrange(len(modelSpace[compSize])):
-            curModel = modelSpace[compSize][i]
+        for i in xrange(len(curModelSpace)):
+            curModel = curModelSpace[i]
             vocab = []
             for k in range(len(curModel)):
                 curMorph = curModel[k]
