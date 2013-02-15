@@ -4,6 +4,7 @@ from Comb import *
 from itertools import repeat
 from Phonology import *
 from random import randint
+from random import random
 
 class word(object):
     def __init__(self,phon,morph):
@@ -24,13 +25,13 @@ class vocab_item(object):
         self.context = context                   #when to use this item
         
 class settings(object):
-    def __init__(self, length, phon, nat, exponnum, bchange, chainlen):
+    def __init__(self, length, phon, nat, exponnum, burnin, chainlen):
         self.vlength = length         #weight of the list length penalty
         self.phon = phon              #weight of the phonology vs. allomorphy 
         self.natural = nat            #maximum number of feature changes in a 'natural' change
 	self.erat = exponnum	      #minimum number of forms that need to share an exponent for it to be used
-	self.bchange = bchange	      #% of time a model which is locally inferior is kept
 	self.chainlen = chainlen      #number of iterations in the Markov chain
+	self.burnin = burnin
 
 class model(object):
     def __init__(self, vocab, mprules):
@@ -311,28 +312,6 @@ def create_mp_model(model,lexicon,setting,debug = False):
 
 def add_mprules(cModel,lexicon,setting,debug=True):
     '''adds morpho-phonological rules to models that fail to generate the data with only contextual allomorphy'''
-    def check_vocab(vocab,lexicon):
-	problems = set([])
-        for type in lexicon.keys():
-            for key in lexicon[type].keys():
-                for word in lexicon[type][key]:
-                    morphs = tuple(y[1] for y in word.morphology)
-                    phonology = []
-		    item_list = []
-		    for morph in morphs:
-                        for item in vocab:
-                            if (item.morph_feature == morph) and (False not in list(x in set(item.context) for x in set(morphs)-set([item.morph_feature]))):
-                                if item.exponent.side == 'b':
-                                    phonology = item.exponent.phon
-                                elif item.exponent.side == 'p':
-                                    phonology = item.exponent.phon + phonology
-                                elif item.exponent.side == 's':
-                                    phonology = phonology + item.exponent.phon
-		                item_list.append(item)
-                    if phonology != word.phonology:
-                        problems.add((tuple(IPAword(phonology)),tuple(IPAword(word.phonology))))
-	print problems
-        return problems
     mprules = []
     workingModel = create_mp_model(cModel,lexicon,setting,debug=True)
     problems = check_vocab(workingModel,lexicon)
@@ -373,164 +352,215 @@ def create_model_space(lexicon,ordering):
                                 morphSet.append((cur_morph,(('b',frozenset([])),('p',z[0]),('s',z[1]))))
                                 morphSet.append((cur_morph,(('b',frozenset([])),('p',z[1]),('s',z[0]))))
 	        morph_list.append(morphSet)
-    output = size_sort(morph_list)
+    output = morph_list
     return output
 
 def check_vocab(vocab,lexicon):
-    for type in lexicon.keys():
-        for key in lexicon[type].keys():
-            for word in lexicon[type][key]:
+        problems = set([])
+        for type in lexicon.keys():
+            for key in lexicon[type].keys():
+                for word in lexicon[type][key]:
+                    morphs = tuple(y[1] for y in word.morphology)
+                    phonology = []
+                    item_list = []
+                    for morph in morphs:
+                        for item in vocab:
+                            if (item.morph_feature == morph) and (False not in list(x in set(item.context) for x in set(morphs)-set([item.morph_feature]))):
+                                if item.exponent.side == 'b':
+                                    phonology = item.exponent.phon
+                                elif item.exponent.side == 'p':
+                                    phonology = item.exponent.phon + phonology
+                                elif item.exponent.side == 's':
+                                    phonology = phonology + item.exponent.phon
+                                item_list.append(item)
+                    if phonology != word.phonology:
+                        problems.add((tuple(IPAword(phonology)),tuple(IPAword(word.phonology))))
+        return problems
+
+def build_model(curModel, lexicon):
+    vocab = []
+    for k in range(len(curModel)):
+        curMorph = curModel[k]
+        bSet = curMorph[1][0][1]
+	pSet = curMorph[1][1][1]
+    	sSet = curMorph[1][2][1]
+        morph = curMorph[0]
+        for subSet in list(x for x in bSet):
+            words = [x.phonology for x in subSet]
+	    context = set([y[1] for x in subSet for y in x.morphology])-set([morph])
+            vocab.append(vocab_item(morph,[IPA[c] for c in find_common_substring([IPAword(x) for x in words])],'b',list(context)))
+        for subSet in pSet:
+            before = set([])
+            after = set([])
+	    context = set([y[1] for x in subSet for y in x.morphology])-set([morph])
+            for word in subSet:
                 morphs = tuple(y[1] for y in word.morphology)
-                phonology = []
-		item_list = []
+                phon = []
                 for item in vocab:
                     if (item.morph_feature in morphs) and (False not in list(x in set(item.context) for x in set(morphs)-set([item.morph_feature]))):
                         if item.exponent.side == 'b':
-                            phonology = item.exponent.phon
+                            phon = item.exponent.phon
                         elif item.exponent.side == 'p':
-                            phonology = item.exponent.phon + phonology
+                            phon = item.exponent.phon + phon
                         elif item.exponent.side == 's':
-                            phonology = phonology + item.exponent.phon
-			item_list.append(item)
-                if phonology != word.phonology:
-                    return False
-    return True
+                            phon = phon + item.exponent.phon
+                if phon != []:
+                    splice_b = []
+                    splice_a = []
+                    store = []
+                    found = 0
+                    for l in range(len(word.phonology)):
+                        x = word.phonology[l]
+                        if found < len(phon):
+                            if x == phon[found]:
+                                store.append(x)
+                                found = found + 1
+                            else:
+                                for y in store:
+                                    splice_b.append(y)
+                                found = 0
+                                store = []
+                                splice_b.append(x)
+                        else:
+                            splice_a.append(x)
+                else:
+                    splice_b = word.phonology
+                    splice_a = word.phonology
+                before.add(tuple(IPAword(splice_b)))
+                after.add(tuple(IPAword(splice_a)))
+	    vocab.append(vocab_item(morph,[IPA[c] for c in find_common_prefix(before)],'p',list(context)))
+        for subSet in sSet:
+            before = set([])
+            after = set([])
+	    context = set([y[1] for x in subSet for y in x.morphology])-set([morph])
+            for word in subSet:
+                morphs = tuple(y[1] for y in word.morphology)
+                phon = ''
+                for item in vocab:
+                    if (item.morph_feature in morphs) and (False not in list(x in set(item.context) for x in set(morphs)-set([item.morph_feature]))):
+                        if item.exponent.side == 'b':
+                            phon = item.exponent.phon
+                        elif item.exponent.side == 'p':
+                            phon = item.exponent.phon + phon
+                        elif item.exponent.side == 's':
+                            phon = phon + item.exponent.phon
+                if phon != []:
+	            splice_b = []
+                    splice_a = []
+                    store = []
+                    found = 0
+                    for l in range(len(word.phonology)):
+	                x = word.phonology[l]
+	                if found < len(phon):
+		            if x == phon[found]:
+			        store.append(x)
+		                found = found + 1
+			    else:
+                                for y in store:
+		                    splice_b.append(y)
+		                found = 0
+                    	        store = []
+		                splice_b.append(x)
+			else:
+			    splice_a.append(x)
+		else:
+                    splice_b = word.phonology
+                    splice_a = word.phonology
+                before.add(tuple(IPAword(splice_b)))
+                after.add(tuple(IPAword(splice_a)))
+            vocab.append(vocab_item(morph,[IPA[c] for c in find_common_suffix(after)],'s',list(context)))
+    return vocab
 
 def build_models(modelSpace, lexicon, settings, mp = True):
     models = []
-    sucess = 0
-    fail = 0
-    compSize = -1
-    while sucess == 0:
-	compSize = compSize + 1
-	curModelSpace = sized_model(modelSpace,compSize)
-	widgets = ['Section ' + str(compSize) + ': ',
-                        Percentage(), ' ', Bar(marker=RotatingMarker()),' ', ETA()]
-        try:
-            pbar = ProgressBar(widgets=widgets,maxval=len(curModelSpace)).start()
-	except:
-	    pbar = ProgressBar(widgets=widgets,maxval=1).start()
-        for i in xrange(len(curModelSpace)):
-            curModel = curModelSpace[i]
-            vocab = []
-            for k in range(len(curModel)):
-                curMorph = curModel[k]
-                bSet = curMorph[1][0][1]
-	        pSet = curMorph[1][1][1]
-		sSet = curMorph[1][2][1]
-                morph = curMorph[0]
-                for subSet in list(x for x in bSet):
-                    words = [x.phonology for x in subSet]
-		    context = set([y[1] for x in subSet for y in x.morphology])-set([morph])
-                    vocab.append(vocab_item(morph,[IPA[c] for c in find_common_substring([IPAword(x) for x in words])],'b',list(context)))
-                for subSet in pSet:
-                    before = set([])
-                    after = set([])
-		    context = set([y[1] for x in subSet for y in x.morphology])-set([morph])
-                    for word in subSet:
-                        morphs = tuple(y[1] for y in word.morphology)
-                        phon = []
-                        for item in vocab:
-                            if (item.morph_feature in morphs) and (False not in list(x in set(item.context) for x in set(morphs)-set([item.morph_feature]))):
-                                if item.exponent.side == 'b':
-                                    phon = item.exponent.phon
-                                elif item.exponent.side == 'p':
-                                    phon = item.exponent.phon + phon
-                                elif item.exponent.side == 's':
-                                    phon = phon + item.exponent.phon
-                        if phon != []:
-                            splice_b = []
-                            splice_a = []
-                            store = []
-                            found = 0
-                            for l in range(len(word.phonology)):
-                                x = word.phonology[l]
-                                if found < len(phon):
-                                    if x == phon[found]:
-                                        store.append(x)
-                                        found = found + 1
-                                    else:
-                                        for y in store:
-                                            splice_b.append(y)
-                                        found = 0
-                                        store = []
-                                        splice_b.append(x)
-                                else:
-                                    splice_a.append(x)
-                        else:
-                            splice_b = word.phonology
-                            splice_a = word.phonology
-                        before.add(tuple(IPAword(splice_b)))
-                        after.add(tuple(IPAword(splice_a)))
-		    vocab.append(vocab_item(morph,[IPA[c] for c in find_common_prefix(before)],'p',list(context)))
-                for subSet in sSet:
-                    before = set([])
-                    after = set([])
-		    context = set([y[1] for x in subSet for y in x.morphology])-set([morph])
-                    for word in subSet:
-                        morphs = tuple(y[1] for y in word.morphology)
-                        phon = ''
-                        for item in vocab:
-                            if (item.morph_feature in morphs) and (False not in list(x in set(item.context) for x in set(morphs)-set([item.morph_feature]))):
-                                if item.exponent.side == 'b':
-                                    phon = item.exponent.phon
-                                elif item.exponent.side == 'p':
-                                    phon = item.exponent.phon + phon
-                                elif item.exponent.side == 's':
-                                    phon = phon + item.exponent.phon
-                        if phon != []:
-		            splice_b = []
-                            splice_a = []
-                            store = []
-                            found = 0
-                            for l in range(len(word.phonology)):
-			        x = word.phonology[l]
-			        if found < len(phon):
-			            if x == phon[found]:
-			                store.append(x)
-		                        found = found + 1
-			            else:
-                                        for y in store:
-		                            splice_b.append(y)
-		                        found = 0
-                    		        store = []
-		                        splice_b.append(x)
-			        else:
-			            splice_a.append(x)
-		        else:
-                            splice_b = word.phonology
-                            splice_a = word.phonology
-                        before.add(tuple(IPAword(splice_b)))
-                        after.add(tuple(IPAword(splice_a)))
-		    vocab.append(vocab_item(morph,[IPA[c] for c in find_common_suffix(after)],'s',list(context)))
-            if check_vocab(vocab,lexicon):
-                sucess = sucess + 1
-                models.append(model(vocab,[]))
+    curModelShape = []
+    for morph in modelSpace:
+	curModelShape.append(morph[randint(0,len(morph)-1)])
+    curVocab = build_model(curModelShape,lexicon)
+    curVocValue = len(check_vocab(curVocab,lexicon))
+    if curVocValue > 0:
+	if mp == True:
+	    curModel = add_mprules(curModelShape,lexicon,settings)
+	    curValue = (len(curModel.vocab)*settings.vlength) + rule_eval(curModel.mprules)
+	else:
+	    curModel = model(curVocab,[])
+	    curValue = (len(curModel.vocab)*settings.vlength)+(curVocValue * 5)
+    else:
+	curModel = model(curVocab,[])
+	curValue = (len(curModel.vocab)*settings.vlength)+(curVocValue * 5)
+    widgets = ['Burning in chain: ',
+                Percentage(), ' ', Bar(marker=RotatingMarker()),' ', ETA()]
+    pbar = ProgressBar(widgets=widgets,maxval=settings.burnin).start()
+    for i in range(settings.burnin):
+	newModelShape = curModelShape
+	while 1==1:
+            changeMorph = randint(0,len(modelSpace)-1)
+            typeComp = random()
+	    option = list(newModelShape)
+            option[changeMorph] = modelSpace[changeMorph][randint(0,len(modelSpace[changeMorph])-1)]
+	    if option != newModelShape:
+		newModelShape = option
+		break
+	newVocab = build_model(newModelShape,lexicon)
+        newVocValue = len(check_vocab(newVocab,lexicon))
+	newValue = 0
+        for item in newVocab:
+            if item.exponent.side == 'b':
+                newValue = newValue + 50*settings.vlength
             else:
-                fail = fail + 1
-		if mp:
-                    models.append(add_mprules(curModel,lexicon,settings))
-	    pbar.update(i+1)
-    	pbar.finish()
-    print 'Success: ' + str(sucess)
-    print 'Fail: ' + str(fail)
+                newValue = newValue + 5*settings.vlength
+        if newVocValue > 0:
+            if mp == True:
+                newModel = add_mprules(newModelShape,lexicon,settings)
+                newValue = (len(newModel.vocab)*settings.vlength) + rule_eval(newModel.mprules)
+            else:
+                newModel = model(newVocab,[])
+                newValue = newValue+(newVocValue * 50)
+        else:
+            newModel = model(newVocab,[])
+            newValue = newValue+(newVocValue * 50)
+        if (curValue >= newValue) or (.01*(random() < (float(newValue)/float(curValue)))):
+	    curModelShape = newModelShape
+	    curModel = newModel
+	    curValue = newValue
+	pbar.update(i+1)
+    pbar.finish()
+    widgets = ['Running Chain: ',
+                Percentage(), ' ', Bar(marker=RotatingMarker()),' ', ETA()]
+    pbar = ProgressBar(widgets=widgets,maxval=settings.chainlen).start()
+    for i in range(settings.chainlen):
+	newModelShape = curModelShape
+	while 1==1:
+            changeMorph = randint(0,len(modelSpace)-1)
+            typeComp = random()
+            option = list(newModelShape)
+            option[changeMorph] = modelSpace[changeMorph][randint(0,len(modelSpace[changeMorph])-1)]
+            if option != newModelShape:
+                newModelShape = option
+                break
+	newVocab = build_model(newModelShape,lexicon)
+        newVocValue = len(check_vocab(newVocab,lexicon))
+	newValue = 0
+	for item in newVocab:
+	    if item.exponent.side == 'b':
+		newValue = newValue + 50*settings.vlength
+	    else:
+		newValue = newValue + 5*settings.vlength
+        if newVocValue > 0:
+            if mp == True:
+                newModel = add_mprules(newModelShape,lexicon,settings)
+                newValue = (len(newModel.vocab)*settings.vlength) + rule_eval(newModel.mprules)
+            else:
+                newModel = model(newVocab,[])
+                newValue = newValue+(newVocValue * 50)
+        else:
+            newModel = model(newVocab,[])
+            newValue = newValue+(newVocValue * 50)
+	if (curValue >= newValue) or (random() < (.01*(float(newValue)/float(curValue)))):
+	    curModelShape = newModelShape
+	    curModel = newModel
+	    curValue = newValue
+	models.append(curModel)
+        pbar.update(i+1)
+    pbar.finish()
     return models
-
-def check_models(models,settings):
-    "checks for the smallest model, and returns a list of the smallest models"
-    for i in range(len(models)):
-        model = models[i]
-        try:
-            if cur_len > (len(model.vocab)*settings.vlength + len(model.mprules)*settings.phon):
-                cur_len = (len(model.vocab)*settings.vlength + len(model.mprules)*settings.phon)
-        except:
-            cur_len = (len(model.vocab)*settings.vlength + len(model.mprules)*settings.phon)
-    smallest = []
-    i = 0
-    for i in range(len(models)):
-        model = models[i]
-        if (len(model.vocab)*settings.vlength + len(model.mprules)*settings.phon) == cur_len:
-            i = i + 1
-            smallest.append(model)
-    print i
-    return smallest
