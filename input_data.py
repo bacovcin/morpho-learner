@@ -39,6 +39,12 @@ class model(object):
         self.vocab = vocab
         self.mprules = mprules
 
+def DictToTuple(adict):
+    nl = []
+    for key in adict:
+	nl.append((key,adict[key]))
+    return tuple(sorted(nl))
+
 def Dictionaryify(input):
     lexicon = {} 
     orderings = []
@@ -188,7 +194,7 @@ def create_mp_model(model,lexicon,setting,debug = False):
                 b = [IPA[c] for c in pair[1]]
 	        phonOut = []
 	        for j in range(len(a)):
-	            if len(featureDifference(a[j], b[j])) <= setting.natural:
+	            if featureDifference(a[j], b[j]) <= setting.natural:
 		        phonOut = phonOut + IPAword([b[j]])
 		    else:
 		        phonOut = []
@@ -260,7 +266,7 @@ def create_mp_model(model,lexicon,setting,debug = False):
                 b = [IPA[c] for c in pair[1]]
 	        phonOut = []
 	        for j in range(len(a)):
-	            if len(featureDifference(a[j], b[j])) <= setting.natural:
+	            if featureDifference(a[j], b[j]) <= setting.natural:
 		        phonOut = phonOut + IPAword([b[j]])
 		    else:
 		        phonOut = []
@@ -314,19 +320,47 @@ def create_mp_model(model,lexicon,setting,debug = False):
 def add_mprules(cModel,lexicon,setting,debug=True):
     '''adds morpho-phonological rules to models that fail to generate the data with only contextual allomorphy'''
     mprules = []
-    workingModel = create_mp_model(cModel,lexicon,setting,debug=True)
+    workingModel = create_mp_model(cModel,lexicon,setting,debug=False)
     problems = check_vocab(workingModel,lexicon)
     for problem in problems:
-	print generateProcesses([IPA[c] for c in problem[0]], [IPA[c] for c in problem[1]])
-	#mprules.append(rule)
+	#print 'Problem: ' + str(problem)i
+	processes = generateProcesses([IPA[c] for c in problem[0]], [IPA[c] for c in problem[1]],debug=False)
+	for i in range(len(processes)):
+	    for loc in processes[i][2]:
+		try:
+		    nloc = frozenset(loc[:3]+[DictToTuple(loc[3])])
+		except:
+		    nloc = frozenset(loc)
+		try:
+		    key = (processes[i][0],IPA[processes[i][1]])
+		except:
+		    key = (processes[i][0],processes[i][1])
+		try:
+		    mprules[i][key].append(nloc)
+		except:
+		    try:
+			mprules[i][key] = [nloc]
+		    except:
+			mprules.append({})
+			mprules[i][key] = [nloc]
+    print 'Simplifying Rules:\n'
+    for i in range(len(mprules)):
+	print mprules[i]
+	for key in mprules[i]:
+	    print key
+	    new = []
+	    for loc in set(mprules[i][key]):
+		new.append((mprules[i][key].count(loc),loc))
+	    raw_input(sorted(new)[-1]) 
+    raw_input()    
     old_model = list(workingModel)
     if debug:
-         for item in old_model:
-             print 'Morphological Feature: ' + str(item.morph_feature)
-             print 'Phonology: ' + ''.join(IPAword(item.exponent.phon))
-             print 'Side: ' + str(item.exponent.side)
-             print 'Context: ' + str(item.context)
-         raw_input('\n\n')
+        for item in old_model:
+            print 'Morphological Feature: ' + str(item.morph_feature)
+            print 'Phonology: ' + ''.join(IPAword(item.exponent.phon))
+            print 'Side: ' + str(item.exponent.side)
+            print 'Context: ' + str(item.context)
+        raw_input('\n\n')
     new_model = model(old_model,mprules)
     return new_model
 

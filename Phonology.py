@@ -219,7 +219,7 @@ def findwhereDel(s, index, debug=False):
     #  before/after segment with features [X]
     #  First segment of type [X] fron R or L 
 
-    s = filter(lambda x: x!="_", s)
+    #s = filter(lambda x: x!="_", s)
     absPosL = index
     absPosR = len(s) - (index + 1)
     
@@ -253,7 +253,7 @@ def findwhereIns(s, index, debug = False):
     #  N segments from R or L
     #  before/after segment with features [X]
     #  Syll structure?
-    s = filter(lambda x: x!="_", s)
+    #s = filter(lambda x: x!="_", s)
     absPosL = index
     absPosR = len(s) - (index + 1)
     
@@ -280,7 +280,7 @@ def findwhereIns(s, index, debug = False):
         
 def findwhereFeatChange(s, index, debug=False):
     '''Find which segment undergoes feature change'''
-    s = filter(lambda x: x!="_", s)
+    #s = filter(lambda x: x!="_", s)
     absPosL = index
     absPosR = len(s) - (index + 1)
     

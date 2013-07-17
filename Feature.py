@@ -63,7 +63,7 @@ class Phoneme:
                  constr_gl = Feature.NotSpecified,
                  lab = Feature.NotSpecified,
                  round = Feature.NotSpecified,
-                 labiodent = Feature.NotSpecified,
+                 dent = Feature.NotSpecified,
                  cor = Feature.NotSpecified,
                  ant = Feature.NotSpecified,
                  dist = Feature.NotSpecified,
@@ -93,7 +93,7 @@ class Phoneme:
         self._features['constr_gl'] = constr_gl
         self._features['lab'] = lab
         self._features['round'] = round
-        self._features['labiodent'] = labiodent
+        self._features['dent'] = dent
         self._features['cor'] = cor
         self._features['ant'] = ant
         self._features['dist'] = dist
