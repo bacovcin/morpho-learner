@@ -25,7 +25,7 @@ if __name__ == '__main__':
     #setting = settings(1,1,3,2,5000,10000,2)
     trials = []
     for i in range(1000):
-        trials.append(learn_vocab(word_list,output=False,iterate=True))#,iterate=True)#,debug=True)
+        trials.append(learn_vocab(word_list,output=False))#,iterate=True))#,iterate=True)#,debug=True)
 	print i
     i = 0.0
     for trial in trials:

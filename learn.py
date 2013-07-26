@@ -55,9 +55,9 @@ def find_common_substring(word_list):
                     result = long_string[j:i]
     return result
 
-def test_vocab(vocab, roots, word_list, iterate):
+def test_vocab(vocab, roots, word_list, printout):
     test = [test_word(vocab,roots,word) for word in word_list]
-    if iterate:
+    if printout:
         print 'Words: ' + str([''.join(IPA[c] for c in word.phonology) for word in word_list])
         print 'Results: ' + str(test)
     return all(test)
@@ -307,8 +307,14 @@ def learn_vocab(word_list, debug = False, iterate = False, output = True):
     vocab = {}
     roots = {}
     iteration = 0
-    while not test_vocab(vocab,roots,word_list,iterate):
-	for word in reordered(word_list):
+    while not test_vocab(vocab,roots,word_list,(iterate and ((output) or (iteration > 2)))):
+	if not debug:
+	    newlist = reordered(word_list)
+	else:
+	    newlist = word_list
+	if iterate and ((output) or (iteration > 2)):
+	    print 'Word list: ' + str([''.join(IPA[c] for c in word.phonology) for word in newlist])
+	for word in newlist:
 	    if debug:
 		print 'ROOT: ' + word.morphology['ROOT']
 		print 'Word.phonology: ' + ''.join([IPA[c] for c in word.phonology])
@@ -384,35 +390,83 @@ def learn_vocab(word_list, debug = False, iterate = False, output = True):
                         pands = ois[2]
                         morphs = list(unused_morphs)
 			context = word.morphology['ROOT']
+			try:
+			    while not isinstance(pands[0][-2],tuple):
+				pands[0][-1] = pands[0][-2] + pands[0][-1]
+                                del pands[0][-2]
+			except IndexError:
+			    pass
+			try:
+                            while not isinstance(pands[1][1],tuple):
+                                pands[1][0] = pands[1][0] + pands[1][1]
+                                del pands[1][1]
+                        except IndexError:
+                            pass
 			for morph in unused_morphs:
-			    vocab[morph] = [vocab_item(morph,[],'s',[context])]
-			for i in range(len(pands[0])-1,-1,-1):
-		            part = pands[0][i]
-			    if not isinstance(part,tuple):
-				pre = part
+			    for partnum in range(len(pands[0])-1):
+                                part = pands[0][partnum]
+                                if not isinstance(part,tuple):
+                                    item = vocab_item(morph,part,'p',[])
+                                    try:
+                                        vocab[morph].append(item)
+                                    except:
+                                        vocab[morph] = [item]
+                                    pands[0][partnum] = (morph,item)
+                                    break
+                            else:
+                                for partnum in range(len(pands[1])-1,0,-1):
+                                    part = pands[1][partnum]
+                                    if not isinstance(part,tuple):
+                                        item = vocab_item(morph,part,'s',[])
+                                        try:
+                                            vocab[morph].append(item)
+                                        except:
+                                            vocab[morph] = [item]
+                                        pands[1][partnum] = (morph,item)
+                                        break
+                                else:
+                                    item = vocab_item(morph,[],'s',[word.morphology['ROOT']])
+                                    try:
+                                        vocab[morph].append(item)
+                                    except:
+                                        vocab[morph] = [item]
+			unexp_phon = 0
+			for i in range(len(pands[0])-1):
+			    if not isinstance(pands[0][i],tuple):
+				unexp_phon = 1
 				break
-			for i in range(len(pands[1])):
+			for i in range(len(pands[1])-1,0):
                             part = pands[1][i]
                             if not isinstance(part,tuple):
-				suf = part
+				unexp_phon = 1
                                 break
-			roots[word.morphology['ROOT']] = find_common_substring([pre,suf])
-			context = word.morphology['ROOT']
-                        for i in range(len(pands[0])-1,-1,-1):
-                            if isinstance(pands[0][i],tuple):
-                                morph = pands[0][i][0]
-				itemnum = vocab[morph].index(pands[1][i][1])
-                                if context not in vocab[morph][itemnum].context:
-                                    vocab[morph][itemnum].context.append(context)
-                                context = morph
-                        context = word.morphology['ROOT']
-                        for i in range(len(pands[1])):
-                            if isinstance(pands[1][i],tuple):
-                                morph = pands[1][i][0]
-				itemnum = vocab[morph].index(pands[1][i][1])
-                                if context not in vocab[morph][itemnum].context:
-                                    vocab[morph][itemnum].context.append(context)
-                                context = morph
+			if unexp_phon == 0:
+			    roots[word.morphology['ROOT']] = find_common_substring([pands[0][-1],pands[1][0]])
+			    context = word.morphology['ROOT']
+                            for i in range(len(pands[0])-1,-1,-1):
+                                if isinstance(pands[0][i],tuple):
+                                    morph = pands[0][i][0]
+				    itemnum = vocab[morph].index(pands[1][i][1])
+                                    if context not in vocab[morph][itemnum].context:
+                                        vocab[morph][itemnum].context.append(context)
+                                    context = morph
+                            context = word.morphology['ROOT']
+                            for i in range(len(pands[1])):
+                                if isinstance(pands[1][i],tuple):
+                                    morph = pands[1][i][0]
+				    itemnum = vocab[morph].index(pands[1][i][1])
+                                    if context not in vocab[morph][itemnum].context:
+                                        vocab[morph][itemnum].context.append(context)
+                                    context = morph
+			else:
+			    roots[word.morphology['ROOT']] = word.phonology
+                            context  = word.morphology['ROOT']
+                            for morph in word.morphology['OTHER']:
+                                vocab[morph] = [vocab_item(morph,[],'s',[context])]
+			    for part in pands[0]+pands[1]:
+				if isinstance(part,tuple):
+				    if part[1].context == []:
+					vocab[part[0]].remove(part[1])
 		else:
 		    old = [x in vocab.keys() for x in word.morphology['OTHER']]
                     if True not in old:
@@ -657,7 +711,7 @@ def learn_vocab(word_list, debug = False, iterate = False, output = True):
                                 context = morph
 	#Clean up and iterate printout
 	vocab = clean_vocab(vocab)
-	if iterate:
+	if iterate and ((output) or (iteration > 2)):
 	    iteration = iteration + 1
 	    print 'Iteration #' + str(iteration)
 	    for root in roots.keys():
@@ -670,8 +724,8 @@ def learn_vocab(word_list, debug = False, iterate = False, output = True):
                     print 'Context: ' + str(item.context)
 	    if iteration > 2:
 	        raw_input('To continue press any button...')
-    if not iterate:
-        iteration = iteration + 1
+	else:
+	    iteration = iteration + 1
     if output:
         print 'Iteration #' + str(iteration)
         for root in roots.keys():
