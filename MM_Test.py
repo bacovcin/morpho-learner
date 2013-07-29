@@ -28,6 +28,7 @@ if __name__ == '__main__':
     word(r'grawniz',{'ROOT':'GREEN','OTHER':['NEUTER','OBLIQUE','PL']}), 
     ]
     #setting = settings(1,1,3,2,5000,10000,2)
+    learn_vocab(word_list,output=False,iterate=True,debug=True)
     trials = []
     for i in range(1000):
         trials.append(learn_vocab(word_list,output=False,iterate=True))#,iterate=True)#,debug=True)

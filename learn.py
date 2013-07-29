@@ -2,6 +2,12 @@ from progressbar import *
 from Phonology import *
 from random import *
 
+class rule(object):
+    def __init__(self,trigger,target,change):
+	self.trigger = trigger
+	self.target = target
+	self.change = change
+
 class word(object):
     def __init__(self,phon,morph):
         self.phonology = PhonParse(phon)#list of segments with features
@@ -14,10 +20,11 @@ class exponent(object):
             
 
 class vocab_item(object):
-    def __init__(self,morph_feature,phonology,side,context):
+    def __init__(self,morph_feature,phonology,side,context,mprules=[]):
         self.morph_feature = morph_feature       #m-feature to be spelled out
         self.exponent = exponent(phonology,side) #exponent and adfix status
         self.context = context                   #when to use this item
+	self.mprules = mprules
         
 class settings(object):
     def __init__(self, length, phon, nat, exponnum, burnin, chainlen, chainnum):
@@ -312,7 +319,7 @@ def learn_vocab(word_list, debug = False, iterate = False, output = True):
 	    newlist = reordered(word_list)
 	else:
 	    newlist = word_list
-	if iterate and ((output) or (iteration > 2)):
+	if iterate:# and ((output) or (iteration > 2)):
 	    print 'Word list: ' + str([''.join(IPA[c] for c in word.phonology) for word in newlist])
 	for word in newlist:
 	    if debug:
