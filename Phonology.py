@@ -76,7 +76,8 @@ def interpretrule(ruleset):
             humanreadable += " from " + location[2]    + "\n"
         print humanreadable            
         
-def featureDifference(x,y, raw = False, toprint = False, list = False, debug=False):
+def featureDifference(x,y, raw = False, toprint = False, list = False, debug=False,
+		      skel_weight = 1000,root_weight = 100,major_weight = 10,minor_weight = 1):
     '''Takes two phonemes and returns difference in features to change X into Y
     If list = True, it returns the list of changed features, otherwise it returns a number
     If raw == True, it return all changed features, otherwise it returns a modified
@@ -101,12 +102,7 @@ def featureDifference(x,y, raw = False, toprint = False, list = False, debug=Fal
         #Major articulators (lab, cor, dors, TR) are next
         # Where should manner features go?
         #Minor place features laryngeal features are easiest
-        
-        skel_weight = 1000
-        root_weight = 100
-        major_weight = 10
-        minor_weight = 1
-        
+       
         skel = ['syll']
         root = ['cons', 'son']
         major = ['lab', 'cor', 'dors', 'TR']
@@ -128,8 +124,7 @@ def featureDifference(x,y, raw = False, toprint = False, list = False, debug=Fal
 
         # Changes:  changing to or from nasal shouldn't count as +/- sonorant as well, since sonorant has a high weight
         #            but the change from stop to nasal is pretty natural
-        
-        n = 0
+	n = 0
         for feat in diff.keys():
             # Special Cases:  
             #1) changing to or from nasal shouldn't count as +/- sonorant as well, since sonorant has a high weight
@@ -291,34 +286,27 @@ def findwhereFeatChange(s, index, debug=False):
     
         
      
-def StrAlign(s1, s2, debug=False):
+def StrAlign(s1, s2, debug=False, deletion_weight = -10, addition_weight = -10, match_weight = 70,featurediff_weight = -30):
     '''Optimal String Alignment with dynamic programming'''
-    n = len(s1)
-    m = len(s2)
-    
-    D = [range(n+1)] * (m+1)
-    for i in range(len(D)):
-        D[i] = range(i, n+i+1)
-    
     #deletion and addition scores should penalize segment deletion and addition
     # Positive scores will create all deletion/addition solutions
-    deletion_weight = -10
-    addition_weight = -10
-    
     #match weight should boost perfect matches
     #high match_weight will choose more matches (even with feature differences)
-    match_weight = 70
     #if match_weight is lower in magnitude than add/del weight, wonky things happen
-    
-    
     # featurediff_weight should penalize partial matches down 
     #from perfect match boost
     # 0 means everything is a match
     # higher magnitude means feature difference is less likely to match
     # lower magnitude means feature difference is more likely to match 
     # positive is wonky
-    featurediff_weight = -30
-    
+   
+    n = len(s1)
+    m = len(s2)
+
+    D = [range(n+1)] * (m+1)
+    for i in range(len(D)):
+        D[i] = range(i, n+i+1)
+ 
     D[0][0] = 0
     
     #for row in D: print row
@@ -508,7 +496,7 @@ def generateProcesses(input, output, debug=False):
         else:
             #it is a feature change
             thisprocess[0] = 'featch'
-            thisprocess[1] = featureDifference(s1aln[i], s2aln[i], raw = True, list = True, toprint=True)
+            thisprocess[1] = featureDifference(s1aln[i], s2aln[i], raw = True, list = True)
             locations = []
             #where?
             where = findwhereFeatChange(s1aln, i)
@@ -543,7 +531,7 @@ def MultiplePairTest(list):
     
 if __name__ == "__main__":
     #print len(featureDifference(IPA['u'], IPA['P']))
-    MultiplePairTest([(r'pater',r'patr'), (r'iken', r'ikn'), (r'wOk', r'wOkt'), 
+    MultiplePairTest([(r'pater',r'patr'), (r'uk9n', r'ixn'), (r'wOb', r'wex'), 
                       (r'fil', r'felt'), (r'oae', r'oe')])
     #generateProcesses(PhonParse(r'oae'), PhonParse(r'oe'), debug=True)
 
