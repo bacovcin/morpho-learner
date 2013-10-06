@@ -1,6 +1,6 @@
 morpho-parser
 =============
 
-A theory-driven computational model of morphological learning.
+A theory-driven morphological parser.
 
 Uses progressbar http://code.google.com/p/python-progressbar/
