@@ -286,13 +286,14 @@ def updateItemConfidence(model,item):
             model.vocab[rootmorph].append(newitem)
         else:
             total = float(sum([x.context[item.context] for x in competitors]))
-            newitem = vocab_item(item.morph_features[1],phon,item.exponent.side,
+            if total != 0:
+                newitem = vocab_item(item.morph_features[1],phon,item.exponent.side,
                                          {item.context:float(total)/
                                         (float(len(competitors))+1)},item.rule)
-            model.vocab[rootmorph].append(newitem)
-            newtotal = total - float(total)/(float(len(competitors))+1)
-            for comp in competitors:
-                comp.context[item.context] = (comp.context[item.context]/float(total))*newtotal
+                model.vocab[rootmorph].append(newitem)
+                newtotal = total - float(total)/(float(len(competitors))+1)
+                for comp in competitors:
+                    comp.context[item.context] = (comp.context[item.context]/float(total))*newtotal
         return model
     phon = item.exponent.phon
     rootmorph = item.morph_features[0]
@@ -387,7 +388,7 @@ def updateItemConfidence(model,item):
                 newitem = vocab_item((rootmorph,newmf),phon,
                         item.exponent.side,item.context,
                         item.rule)
-                model = updateItemConfidence(model,newitem)
+                model = addNewItem(model,newitem)
     return model
 
 
