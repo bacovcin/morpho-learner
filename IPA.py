@@ -33,7 +33,7 @@ def ParseTIPA(string):
                 output.append(tipachar)
                 tipachar = ''
                 string = string[3:]
-            elif rawchar in '!*:;': #punct
+            elif rawchar in '!*:;~': #punct
                 tipachar = tipachar + rawchar + string.pop(0)
                 output.append(tipachar)
                 tipachar = ''
@@ -57,66 +57,66 @@ def ParseTIPA(string):
 
 
 duplicates = {
-"\textturna" : "5",
-"\textscripta" : "A",
-"\textturnscripta" : "6",
-"\textturnv" : "2",
-"\textscb" : "\;B",
-"\textbeta" : "\B",
-"\textctc" : "C",
-"\textrtaild" : "\:d",
-"\dh" : "D",
-"\textschwa" : "@",
-"\textreve" : "9",
-"\textepsilon" : "E",
-"\textrevepsilon" : "3",
-"\textg" : "g",
-"\texthtg" : "\!g",
-"\textscg" : "\;G",
-"\textbabygamma" : "7",
-"\textramshorns" : "7",
-"\texthth" : "H",
-"\textturnh" : "4",
-"\textsch " : "\;H",
-"\textbari" : "1",
-"\textsci" : "I",
-"\textctj" : "J",
-"\textltilde " : "\|~l",
-"\textrtaill " : "\:l",
-"\textscl " : "\;L",
-"\textltailm" : "M",
-"\textturnm" : "W",
-"\~n" : "\textltailn",
-"\textrtailn" : "\:n",
-"\ng" : "N",
-"\textscn" : "\;N",
-"\textbaro" : "8",
-"\textscoelig" : "\OE",
-"\textopeno" : "O",
-"\textphi" : "F",
-"\textfishhookr" : "R",
-"\textrtailr" : "\:r",
-"\textturnr" : "\*r",
-"\textscr" : "\;R",
-"\textinvscr" : "K",
-"\textrtails" : "\:s",
-"\textesh" : "S",
-"\textrtailt" : "\:t",
-"\texttheta" : "T",
-"\textbaru" : "0",
-"\textupsilon" : "U",
-"\textscu" : "U",
-"\;U" : "U",
-"\textscriptv" : "V",
-"\textturnw" : "\*w",
-"\textturny" : "L",
-"\textscy" : "Y",
-"\textrtailz" : "\:z",
-"\textyogh" : "Z",
-"\textglotstop" : "P",
-"\textrevglotstop" : "Q",
-'3' : '@', 
-'\textrhookrevepsilon' : 'textrhookschwa'}
+r"\textturna" : r"5",
+r"\textscripta" : r"A",
+r"\textturnscripta" : r"6",
+r"\textturnv" : r"2",
+r"\textscb" : r"\;B",
+r"\textbeta" : r"\B",
+r"\textctc" : r"C",
+r"\textrtaild" : r"\:d",
+r"\dh" : r"D",
+r"\textschwa" : r"@",
+r"\textreve" : r"9",
+r"\textepsilon" : r"E",
+r"\textrevepsilon" : r"3",
+r"\textg" : r"g",
+r"\texthtg" : r"\!g",
+r"\textscg" : r"\;G",
+r"\textbabygamma" : r"7",
+r"\textramshorns" : r"7",
+r"\texthth" : r"H",
+r"\textturnh" : r"4",
+r"\textsch " : r"\;H",
+r"\textbari" : r"1",
+r"\textsci" : r"I",
+r"\textctj" : r"J",
+r"\textltilde" : r"\|~l",
+r"\textrtaill" : r"\:l",
+r"\textscl" : r"\;L",
+r"\textltailm" : r"M",
+r"\textturnm" : r"W",
+r"\~n" : r"\textltailn",
+r"\textrtailn" : r"\:n",
+r"\ng" : r"N",
+r"\textscn" : r"\;N",
+r"\textbaro" : r"8",
+r"\textscoelig" : r"\OE",
+r"\textopeno" : r"O",
+r"\textphi" : r"F",
+r"\textfishhookr" : r"R",
+r"\textrtailr" : r"\:r",
+r"\textturnr" : r"\*r",
+r"\textscr" : r"\;R",
+r"\textinvscr" : r"K",
+r"\textrtails" : r"\:s",
+r"\textesh" : r"S",
+r"\textrtailt" : r"\:t",
+r"\texttheta" : r"T",
+r"\textbaru" : r"0",
+r"\textupsilon" : r"U",
+r"\textscu" : r"U",
+r"\;U" : r"U",
+r"\textscriptv" : r"V",
+r"\textturnw" : r"\*w",
+r"\textturny" : r"L",
+r"\textscy" : r"Y",
+r"\textrtailz" : r"\:z",
+r"\textyogh" : r"Z",
+r"\textglotstop" : r"P",
+r"\textrevglotstop" : r"Q",
+r'@' : '3', 
+r'\textrhookrevepsilon' : r'textrhookschwa'}
 
 def replaceDuplicates(charlist):
     for i in range(len(charlist)):
@@ -128,6 +128,7 @@ def replaceDuplicates(charlist):
 IPA = doubleDict()
 
 IPA[r'_'] = '_' #for alignment
+IPA[r'\~a'] = Phoneme(quick="+syll, +son, +cont, +voice, +dors, +low, -tense, +nas")
 IPA[r'a'] = Phoneme(quick="+syll, +son, +cont, +voice, +dors, +low, -tense")
 IPA[r'5'] = Phoneme(quick="+syll, +son, +cont, +voice, +dors, +low, +tense")
 IPA[r'A'] = Phoneme(quick='+syll, +son, +dors, +back, +low, +cont, +voice')
@@ -145,8 +146,9 @@ IPA[r'\:d'] = Phoneme(quick='+cons, +cor, +voice')
 IPA[r'\textdzlig'] = Phoneme(quick='+cons, +cor, +ant, +strid, +voice, +del_rel')
 IPA[r'\textdyoghlig'] = Phoneme(quick='+cons, +cor, +dist, +strid, +voice, +del_rel')
 IPA[r'D'] = Phoneme(quick='+cons, +cor, +ant, +cont, +voice')
+IPA[r'\~e'] = Phoneme(quick='+syll, +son, +dors, +tense, +cont, +voice, +front, +nas')
 IPA[r'e'] = Phoneme(quick='+syll, +son, +dors, +tense, +cont, +voice, +front')
-IPA[r'@'] = Phoneme(quick='+syll, +son, +dors, +cont, +voice')
+IPA[r'3'] = Phoneme(quick='+syll, +son, +dors, +cont, +voice')
 IPA[r'\textrhookschwa'] = Phoneme(quick='+syll, +son, +dors, +cont, +voice, +rhotic')
 IPA[r'9'] = Phoneme(quick = '+syll, +son, +dors, +tense, +cont, +voice')
 IPA[r'E'] = Phoneme(quick = '+syll, +son, +dors, +cont, +voice, +front')
@@ -165,8 +167,8 @@ IPA[r'4'] = Phoneme(quick = '+son, +lab, +dors, +round, +high, +cont, +voice')
 IPA[r'i'] = Phoneme(quick = '+syll, +son, +dors, +high, +tense, +cont, +voice, +front')
 IPA[r'1'] = Phoneme(quick = '+syll, +son, +dors, +high, +tense, +cont, +voice')
 IPA[r'I'] = Phoneme(quick = '+syll, +son, +dors, +high, +front, +cont, +voice')
-IPA[r'j'] = Phoneme(quick = '+son, +dors, +high, +dist, +cont, +voice')
-IPA[r'J'] = Phoneme(quick = '+cons, +dors, +high, +dist, +cont, +voice')
+IPA[r'j'] = Phoneme(quick = '+son, +dors, +high, +dist, +cont, +voice, 0syll')
+IPA[r'J'] = Phoneme(quick = '+cons, +dors, +high, +dist, +cont, +voice, 0syll')
 IPA[r'\textbardotlessj'] = Phoneme(quick='+cons, +dors, +dist, +high, +voice')
 IPA[r'k'] = Phoneme(quick = '+cons, +dors, +high, +back')
 IPA[r'l'] = Phoneme(quick = '+cons, +son, +cor, +ant, +cont, +voice, +lat')
@@ -184,6 +186,7 @@ IPA[r'\:n'] = Phoneme(quick = '+cons, +son, +cor, +nas, +voice')
 IPA[r'\textltailn'] = Phoneme(quick = '+cons, +son, +dors, +high, +nas, +voice')
 IPA[r'N'] = Phoneme(quick = '+cons, +son, +dors, +high, +back, +nas, +voice')
 IPA[r'\;N'] = Phoneme(quick = '+cons, +son, +dors, +back, +nas, +voice')
+IPA[r'\~o'] = Phoneme(quick = '+syll, +son, +lab, +dors, +round, +back, +tense, +cont, +voice, +nas')
 IPA[r'o'] = Phoneme(quick = '+syll, +son, +lab, +dors, +round, +back, +tense, +cont, +voice')
 IPA[r'8'] = Phoneme(quick = '+syll, +son, +lab, +dors, +round, +tense, +cont, +voice')
 IPA[r'\o'] = Phoneme(quick = '+syll, +son, +lab, +dors, +round, +front, +tense, +cont, +voice')
@@ -205,6 +208,7 @@ IPA[r's'] = Phoneme(quick = '+cons, +cor, +ant, +cont, +strid')
 IPA[r'\:s'] = Phoneme(quick = '+cons, +cor, +cont, +strid')
 IPA[r'S'] = Phoneme(quick = '+cons, +cor, +dist, +cont, +strid')
 IPA[r't'] = Phoneme(quick = '+cons, +cor, +ant')
+IPA[r't\textsubsquare'] = Phoneme(quick = '+cons, +cor, +ant, +dist')
 IPA[r'\:t'] = Phoneme(quick = '+cons, +cor')
 IPA[r'\texttslig'] = Phoneme(quick='+cons, +cor, +ant, +strid, +del_rel')
 IPA[r'\textteshlig'] = Phoneme(quick='+cons, +cor, +dist, +strid, +del_rel')
@@ -213,9 +217,9 @@ IPA[r'u'] = Phoneme(quick = '+syll, +son, +lab, +dors, +round, +high, +back, +te
 IPA[r'0'] = Phoneme(quick = '+syll, +son, +lab, +dors, +round, +high, +tense, +cont, +voice')
 IPA[r'U'] = Phoneme(quick = '+syll, +son, +lab, +dors, +round, +high, +back, +cont, +voice')
 IPA[r'v'] = Phoneme(quick = '+cons, +lab, +dent, +cont, +strid, +voice')
-IPA[r'V'] = Phoneme(quick = '+cons, +son, +lab, +dent, +cont, +voice')
-IPA[r'w'] = Phoneme(quick = '+son, +lab, +dors, +round, +high, +back, +cont, +voice')
-IPA[r'\*w'] = Phoneme(quick = '+son, +lab, +dors, +round, +high, +back, +cont')
+IPA[r'V'] = Phoneme(quick = '+cons, +son, +lab, +dent, +cont, +voice, 0syll')
+IPA[r'w'] = Phoneme(quick = '+son, +lab, +dors, +round, +high, +back, +cont, +voice, 0syll')
+IPA[r'\*w'] = Phoneme(quick = '+son, +lab, +dors, +round, +high, +back, +cont, 0syll')
 IPA[r'x'] = Phoneme(quick = '+cons, +dors, +back, +high, +cont')
 IPA[r'X'] = Phoneme(quick = '+cons, +dors, +back, +cont, +strid')
 IPA[r'y'] = Phoneme(quick = '+syll, +son, +lab, +dors, +round, +high, +front, +tense, +cont, +voice')
@@ -228,7 +232,46 @@ IPA[r'\textctz'] = Phoneme(quick='+cons, +dors, +dist, +high, +front, +cont, +vo
 IPA[r'P'] = Phoneme(quick='+son, +lar, +constr_gl')
 IPA[r'Q'] = Phoneme(quick ='+son, +TR, +cont, +voice')
 
-                    
+#New symbols (NOT TIPA APPROVED) \Cl means laminal consonant \Cj means palatalized \Ch means aspirated \Vh means voiceless
+#\Cw and \Vw means rounded
+IPA[r'\tlj'] = Phoneme(quick = '-TR, +ant, -back, +cons, -constr_gl, -cont, +cor, -del_rel, -dent, +dist, +dors, -flap, 0front, +high, -lab, -lar, -lat, 0low, -nas, -rhotic, -round, -son, -spread_gl, -strid, -syll, -tap, 0tense, -trill, -voice')
+IPA[r'\slj'] = Phoneme(quick = '-TR, +ant, -back, +cons, -constr_gl, +cont, +cor, -del_rel, -dent, +dist, +dors, -flap, 0front, +high, -lab, -lar, -lat, 0low, -nas, -rhotic, -round, -son, -spread_gl, +strid, -syll, -tap, 0tense, -trill, -voice')
+IPA[r'\pj'] = Phoneme(quick = '-TR, 0ant, -back, +cons, -constr_gl, -cont, -cor, -del_rel, -dent, 0dist, +dors, -flap, 0front, +high, +lab, -lar, -lat, 0low, -nas, -rhotic, -round, -son, -spread_gl, 0strid, -syll, -tap, 0tense, -trill, -voice')
+IPA[r'\eh'] = Phoneme(quick = '-TR, 0ant, -back, -cons, -constr_gl, +cont, -cor, -del_rel, -dent, 0dist, +dors, -flap, +front, -high, -lab, -lar, -lat, -low, -nas, -rhotic, -round, +son, -spread_gl, 0strid, +syll, -tap, +tense, -trill, -voice')
+IPA[r'\sl'] = Phoneme(quick = '-TR, +ant, 0back, +cons, -constr_gl, +cont, +cor, -del_rel, -dent, +dist, -dors, -flap, 0front, 0high, -lab, -lar, -lat, 0low, -nas, -rhotic, -round, -son, -spread_gl, +strid, -syll, -tap, 0tense, -trill, -voice')
+IPA[r'\nlj'] = Phoneme(quick = '-TR, +ant, -back, +cons, -constr_gl, -cont, +cor, -del_rel, -dent, +dist, +dors, -flap, 0front, +high, -lab, -lar, -lat, 0low, +nas, -rhotic, -round, +son, -spread_gl, -strid, -syll, -tap, 0tense, -trill, +voice')
+IPA[r'\nj'] = Phoneme(quick = '-TR, +ant, -back, +cons, -constr_gl, -cont, +cor, -del_rel, -dent, -dist, +dors, -flap, 0front, +high, -lab, -lar, -lat, 0low, +nas, -rhotic, -round, +son, -spread_gl, -strid, -syll, -tap, 0tense, -trill, +voice')
+IPA[r'\tj'] = Phoneme(quick = '-TR, +ant, -back, +cons, -constr_gl, -cont, +cor, -del_rel, -dent, -dist, +dors, -flap, 0front, +high, -lab, -lar, -lat, 0low, -nas, -rhotic, -round, -son, -spread_gl, -strid, -syll, -tap, 0tense, -trill, -voice')
+IPA[r'\rj'] = Phoneme(quick = '-TR, +ant, -back, +cons, -constr_gl, +cont, +cor, -del_rel, -dent, -dist, +dors, -flap, 0front, +high, -lab, -lar, -lat, 0low, -nas, -rhotic, -round, +son, -spread_gl, -strid, -syll, -tap, 0tense, +trill, +voice')
+IPA[r'\dlj'] = Phoneme(quick = '-TR, +ant, -back, +cons, -constr_gl, -cont, +cor, -del_rel, -dent, +dist, +dors, -flap, 0front, +high, -lab, -lar, -lat, 0low, -nas, -rhotic, -round, -son, -spread_gl, -strid, -syll, -tap, 0tense, -trill, +voice')
+IPA[r'\nl'] = Phoneme(quick = '-TR, +ant, 0back, +cons, -constr_gl, -cont, +cor, -del_rel, -dent, +dist, -dors, -flap, 0front, 0high, -lab, -lar, -lat, 0low, +nas, -rhotic, -round, +son, -spread_gl, -strid, -syll, -tap, 0tense, -trill, +voice')
+IPA[r'\ih'] = Phoneme(quick = '-TR, 0ant, -back, -cons, -constr_gl, +cont, -cor, -del_rel, -dent, 0dist, +dors, -flap, +front, +high, -lab, -lar, -lat, -low, -nas, -rhotic, -round, +son, -spread_gl, 0strid, +syll, -tap, +tense, -trill, -voice')
+IPA[r'\lj'] = Phoneme(quick = '-TR, +ant, -back, +cons, -constr_gl, +cont, +cor, -del_rel, -dent, -dist, +dors, -flap, 0front, +high, -lab, -lar, +lat, 0low, -nas, -rhotic, -round, +son, -spread_gl, -strid, -syll, -tap, 0tense, -trill, +voice')
+IPA[r'\dj'] = Phoneme(quick = '-TR, +ant, -back, +cons, -constr_gl, -cont, +cor, -del_rel, -dent, -dist, +dors, -flap, 0front, +high, -lab, -lar, -lat, 0low, -nas, -rhotic, -round, -son, -spread_gl, -strid, -syll, -tap, 0tense, -trill, +voice')
+IPA[r'\bj'] = Phoneme(quick = '-TR, 0ant, -back, +cons, -constr_gl, -cont, -cor, -del_rel, -dent, 0dist, +dors, -flap, 0front, +high, +lab, -lar, -lat, 0low, -nas, -rhotic, -round, -son, -spread_gl, 0strid, -syll, -tap, 0tense, -trill, +voice')
+IPA[r'\mj'] = Phoneme(quick = '-TR, 0ant, -back, +cons, -constr_gl, -cont, -cor, -del_rel, -dent, 0dist, +dors, -flap, 0front, +high, +lab, -lar, -lat, 0low, +nas, -rhotic, -round, +son, -spread_gl, 0strid, -syll, -tap, 0tense, -trill, +voice')
+IPA[r'\sj'] = Phoneme(quick = '-TR, +ant, -back, +cons, -constr_gl, +cont, +cor, -del_rel, -dent, -dist, +dors, -flap, 0front, +high, -lab, -lar, -lat, 0low, -nas, -rhotic, -round, -son, -spread_gl, +strid, -syll, -tap, 0tense, -trill, -voice')
+IPA[r'\ah'] = Phoneme(quick = '-TR, 0ant, -back, -cons, -constr_gl, +cont, -cor, -del_rel, -dent, 0dist, +dors, -flap, -front, -high, -lab, -lar, -lat, +low, -nas, -rhotic, -round, +son, -spread_gl, 0strid, +syll, -tap, -tense, -trill, -voice')
+IPA[r'\Bj'] = Phoneme(quick = '-TR, 0ant, -back, +cons, -constr_gl, +cont, -cor, -del_rel, -dent, 0dist, +dors, -flap, 0front, +high, +lab, -lar, -lat, 0low, -nas, -rhotic, -round, -son, -spread_gl, 0strid, -syll, -tap, 0tense, -trill, +voice')
+IPA[r'\1w'] = Phoneme(quick = '-TR, 0ant, -back, -cons, -constr_gl, +cont, -cor, -del_rel, -dent, 0dist, +dors, -flap, -front, +high, -lab, -lar, -lat, -low, -nas, -rhotic, +round, +son, -spread_gl, 0strid, +syll, -tap, +tense, -trill, +voice')
+IPA[r'\zlw'] = Phoneme(quick = '-TR, +ant, -back, +cons, -constr_gl, +cont, +cor, -del_rel, -dent, +dist, +dors, -flap, 0front, +high, -lab, -lar, -lat, 0low, -nas, -rhotic, -round, -son, -spread_gl, +strid, -syll, -tap, 0tense, -trill, +voice')
+IPA[r'\Ah'] = Phoneme(quick = '-TR, 0ant, +back, -cons, -constr_gl, +cont, -cor, -del_rel, -dent, 0dist, +dors, -flap, -front, -high, -lab, -lar, -lat, +low, -nas, -rhotic, -round, +son, -spread_gl, 0strid, +syll, -tap, -tense, -trill, -voice')
+IPA[r'\5w'] = Phoneme(quick = '-TR, 0ant, -back, -cons, -constr_gl, +cont, -cor, -del_rel, -dent, 0dist, +dors, -flap, -front, -high, -lab, -lar, -lat, +low, -nas, -rhotic, +round, +son, -spread_gl, 0strid, +syll, -tap, +tense, -trill, +voice')
+IPA[r'\gw'] = Phoneme(quick = '-TR, 0ant, +back, +cons, -constr_gl, -cont, -cor, -del_rel, -dent, 0dist, +dors, -flap, -front, +high, -lab, -lar, -lat, -low, -nas, -rhotic, +round, -son, -spread_gl, 0strid, -syll, -tap, -tense, -trill, +voice')
+IPA[r'\kw'] = Phoneme(quick = '-TR, 0ant, +back, +cons, -constr_gl, -cont, -cor, -del_rel, -dent, 0dist, +dors, -flap, -front, +high, -lab, -lar, -lat, -low, -nas, -rhotic, +round, -son, -spread_gl, 0strid, -syll, -tap, -tense, -trill, -voice')
+IPA[r'\ph'] = Phoneme(quick = '-TR, 0ant, 0back, +cons, -constr_gl, -cont, -cor, -del_rel, -dent, 0dist, -dors, -flap, 0front, 0high, +lab, -lar, -lat, 0low, -nas, -rhotic, -round, -son, +spread_gl, 0strid, -syll, -tap, 0tense, -trill, -voice')
+IPA[r'\kh'] = Phoneme(quick = '-TR, 0ant, +back, +cons, -constr_gl, -cont, -cor, -del_rel, -dent, 0dist, +dors, -flap, -front, +high, -lab, -lar, -lat, -low, -nas, -rhotic, -round, -son, +spread_gl, 0strid, -syll, -tap, -tense, -trill, -voice')
+IPA[r'\th'] = Phoneme(quick = '-TR, +ant, 0back, +cons, -constr_gl, -cont, +cor, -del_rel, -dent, -dist, -dors, -flap, 0front, 0high, -lab, -lar, -lat, 0low, -nas, -rhotic, -round, -son, +spread_gl, -strid, -syll, -tap, 0tense, -trill, -voice')
+IPA[r'\Tj'] = Phoneme(quick = '-TR, +ant, -back, +cons, -constr_gl, +cont, +cor, -del_rel, -dent, -dist, +dors, -flap, 0front, +high, -lab, -lar, -lat, 0low, -nas, -rhotic, -round, -son, -spread_gl, -strid, -syll, -tap, 0tense, -trill, -voice')
+IPA[r'\Mj'] = Phoneme(quick = '-TR, 0ant, -back, +cons, -constr_gl, -cont, -cor, -del_rel, +dent, 0dist, +dors, -flap, 0front, +high, +lab, -lar, -lat, 0low, +nas, -rhotic, -round, +son, -spread_gl, 0strid, -syll, -tap, 0tense, -trill, +voice')
+IPA[r'\Dj'] = Phoneme(quick = '-TR, +ant, -back, +cons, -constr_gl, +cont, +cor, -del_rel, -dent, -dist, +dors, -flap, 0front, +high, -lab, -lar, -lat, 0low, -nas, -rhotic, -round, -son, -spread_gl, -strid, -syll, -tap, 0tense, -trill, +voice')
+IPA[r'\hw'] = Phoneme(quick = '-TR, 0ant, 0back, -cons, -constr_gl, +cont, -cor, -del_rel, -dent, 0dist, -dors, -flap, 0front, 0high, -lab, +lar, -lat, 0low, -nas, -rhotic, +round, +son, +spread_gl, 0strid, -syll, -tap, 0tense, -trill, -voice')
+IPA[r'\bh'] = Phoneme(quick = '-TR, 0ant, 0back, +cons, -constr_gl, -cont, -cor, -del_rel, -dent, 0dist, -dors, -flap, 0front, 0high, +lab, -lar, -lat, 0low, -nas, -rhotic, -round, -son, +spread_gl, 0strid, -syll, -tap, 0tense, -trill, +voice')
+IPA[r'\:th'] = Phoneme(quick = '-TR, -ant, 0back, +cons, -constr_gl, -cont, +cor, -del_rel, -dent, -dist, -dors, -flap, 0front, 0high, -lab, -lar, -lat, 0low, -nas, -rhotic, -round, -son, +spread_gl, -strid, -syll, -tap, 0tense, -trill, -voice')
+IPA[r'\dh'] = Phoneme(quick = '-TR, +ant, 0back, +cons, -constr_gl, -cont, +cor, -del_rel, -dent, -dist, -dors, -flap, 0front, 0high, -lab, -lar, -lat, 0low, -nas, -rhotic, -round, -son, +spread_gl, -strid, -syll, -tap, 0tense, -trill, +voice')
+IPA[r'\gh'] = Phoneme(quick = '-TR, 0ant, +back, +cons, -constr_gl, -cont, -cor, -del_rel, -dent, 0dist, +dors, -flap, -front, +high, -lab, -lar, -lat, -low, -nas, -rhotic, -round, -son, +spread_gl, 0strid, -syll, -tap, -tense, -trill, +voice')
+IPA[r'\Gj'] = Phoneme(quick = '-TR, 0ant, -back, +cons, -constr_gl, +cont, -cor, -del_rel, -dent, 0dist, +dors, -flap, -front, +high, -lab, -lar, -lat, -low, -nas, -rhotic, -round, -son, -spread_gl, 0strid, -syll, -tap, -tense, -trill, +voice')
+
 
 def PhonParse(string):
     '''Input a string (in TIPA), returns a list of Phonemes'''
