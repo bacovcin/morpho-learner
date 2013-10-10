@@ -7,6 +7,7 @@ import sets
 import copy
 
 def weighted(weights):
+    weights = tuple(weights)
     r = random()
     q = 0
     for i in range(len(weights)):
@@ -61,14 +62,16 @@ def iterateOutput(model,word_list,iteration):
     print 'Iteration #' + str(iteration)
     for root in model.roots.keys():
         print root + ': ' + ''.join([IPA[c] for x in model.roots[root] for c in x[0]])
-        for key in model.vocab.keys():
-            print '\n' + key + ':'
-            for item in model.vocab[key]:
-                print 'Exponent Phonology: ' + ''.join([IPA[c] for c in item.exponent.phon])
-                print 'Exponent Side: ' + item.exponent.side
-                print 'Context: ' + str(item.context)
-                print 'Rule: ' + str(item.rule)
-    if iteration > 0:
+    for key in model.vocab.keys():
+        print '\n' + key + ':'
+        for item in model.vocab[key]:
+            print 'Morphological Features: ' + str(item.morph_features)
+            print 'Exponent Phonology: ' + ''.join([IPA[c] for c in item.exponent.phon])
+            print 'Exponent Side: ' + item.exponent.side
+            print 'Context: ' + str(item.context)
+            print 'Rule: ' + str(item.rule)
+    print iteration
+    if iteration % 20 == 0:
         raw_input('To continue press any button...')
     return 
 
@@ -285,7 +288,7 @@ def updateItemConfidence(model,item):
             newitem = vocab_item(item.morph_features[1],phon,item.exponent.side,
                                          {item.context:1.0},item.rule)
             model.vocab[rootmorph].append(newitem)
-        else:
+        else:     
             total = float(sum([x.context[item.context] for x in competitors]))
             if total != 0:
                 newitem = vocab_item(item.morph_features[1],phon,item.exponent.side,
@@ -379,10 +382,13 @@ def updateItemConfidence(model,item):
                         for comp in competitors:
                             comp.context[item.context] = (comp.context[item.context]/total)*newtotal
                 else:
-                    contendor.context[item.context] = total/(float(len(competitors))+1)
-                    newtotal = total - contendor.context[item.context]
-                    for comp in competitors:
-                        comp.context[item.context] = (comp.context[item.context]/total)*newtotal
+                    if len(competitors) > 0:
+                        contendor.context[item.context] = total/(float(len(competitors))+1)
+                        newtotal = total - contendor.context[item.context]
+                        for comp in competitors:
+                            comp.context[item.context] = (comp.context[item.context]/total)*newtotal
+                    else:
+                         contendor.context[item.context] = 1.0
             else:
                 newmf = contendor.morph_features.intersection(item.morph_features[1])
                 total = float(sum([x.context[item.context] for x in competitors]))
@@ -393,15 +399,20 @@ def updateItemConfidence(model,item):
     return model
 
 
-def testWord(model, word):
+def testWord(model, word, debug=False):
     root = word.morphology['ROOT']
     morphs = copy.deepcopy(word.morphology['OTHER'])
     items = []
     try:
-        phon = model.roots[root][weighted([x[1] for x in model.roots[root]])]
+        phon = model.roots[root][weighted([x[1] for x in model.roots[root]])][0]
         items.append((root,phon))
         pcontext = ('ROOT',root)
         scontext = ('ROOT',root)
+        if debug:
+            print 'testWord: '
+            print 'root: ' + str(root)
+            print 'morphs: ' + str(morphs)
+            print 'phon: ' + ''.join([IPA[c] for c in phon])
         for morph in morphs:
             if morph in model.linear.keys():
                 linearchoices = [model.linear[morph][x] for x in model.linear[morph].keys() 
@@ -443,56 +454,89 @@ def testWord(model, word):
                                                                     and x[1][0] == scontext[0])]
                 if linearchoices == []:
                     return False
-        pchance = float(sum(linearchoices))/float(len(linearchoices))
-        rule = []
-        icontext = []
-        if random() >= pchance: #Greater than prefix-chance means suffix
-            choiceset = [x for x in model.vocab[morph[0]] if (x.morph_features.issubset(morph[1])
-                                                                  and x.exponent.side == 'p'
+            pchance = float(sum(linearchoices))/float(len(linearchoices))
+            rule = []
+            icontext = []
+            if random() >= pchance: #Greater than prefix-chance means suffix
+                choiceset = [x for x in model.vocab[morph[0]] if (x.morph_features.issubset(morph[1])
+                                                                  and x.exponent.side == 's'
                                                                   and scontext in x.context.keys())]
-            choiceset = sorted(choiceset, key= lambda self: -len(self.morph_features))
-            if choiceset != []:
-                choice = choiceset[weighted(x.context[scontext] for x in choiceset)]
+                choiceset = sorted(choiceset, key= lambda self: -len(self.morph_features))
+                if len(choiceset) == 1:
+                    if choiceset[0].context[scontext] != 0.0:
+                        choice = choiceset[0]
+                    else:
+                        return False
+                elif choiceset != []:
+                    print tuple(x.context[scontext] for x in choiceset)
+                    choice = choiceset[weighted(x.context[scontext] for x in choiceset)]
+                else:
+                    choiceset = [x for x in model.vocab[morph[0]] if (x.morph_features.issubset(morph[1])
+                                                                  and x.exponent.side == 's'
+                                                                  and scontext[0] in [y[0] for y in  x.context.keys()])]
+                    if choiceset != []:
+                        choiceset = sorted(choiceset, key= lambda self: -len(self.morph_features))
+                        if len(choiceset) == 1:
+                            if choiceset[0].context[pcontext] != 0.0:
+                                choice = choiceset[0]
+                            else:
+                                return False
+                        else:
+                            choicep = [(float(sum([y.context[x] for x in y.context.keys() if x[0] == scontext[0]]))/
+                                float(len([y.context[x] for x in y.context.keys() if x[0] == scontext[0]])))
+                                for y in choiceset]
+                            choice = choiceset[weighted(choicep)]
+                    else:
+                        return False
+                icontext = scontext
+                scontext = morph
+                if choice.rule not in [[],[[]]]:
+                    rule = choice.rule
+                    for process in rule:
+                        phon = applyProcess(process,phon)
+                phon = phon + choice.exponent.phon
             else:
                 choiceset = [x for x in model.vocab[morph[0]] if (x.morph_features.issubset(morph[1])
                                                                   and x.exponent.side == 'p'
-                                                                  and scontext[0] in [y[0] for y in  x.context.keys()])]
-                choiceset = [x for x in sorted(choiceset, key= lambda self: -len(self.morph_features))]
-                choicep = [(float(sum([y.context[x] for x in self.context.keys() if x[0] == scontext[0]]))/
-                                float(len([y.context[x] for x in self.context.keys() if x[0] == scontext[0]]))) 
-                                for y in choiceset]
-                choice = choiceset[weighted(choicep)]
-            icontext = scontext
-            scontext = morph
-            if choice.rule != []:
-                rule = choice.rule
-                phon = applyProcess(rule,phon)
-            phon = phon + choice.exponent.phon
-        else:
-            choiceset = [x for x in model.vocab[morph[0]] if (x.morph_features.issubset(morph[1])
-                                                                  and x.exponent.side == 's'
                                                                   and pcontext in x.context.keys())]
-            choiceset = sorted(choiceset, key= lambda self: -len(self.morph_features))
-            if choiceset != []:
-                choice = choiceset[weighted(x.context[pcontext] for x in choiceset)]
-            else:
-                choiceset = [x for x in model.vocab[morph[0]] if (x.morph_features.issubset(morph[1])
-                                                                  and x.exponent.side == 's'
+                choiceset = sorted(choiceset, key= lambda self: -len(self.morph_features))
+                if len(choiceset) == 1:
+                    if choiceset[0].context[pcontext] != 0.0:
+                        choice = choiceset[0]
+                    else:
+                        return False
+                elif choiceset != []:
+                    print tuple(x.context[pcontext] for x in choiceset)
+                    choice = choiceset[weighted(x.context[pcontext] for x in choiceset)]
+                else:
+                    choiceset = [x for x in model.vocab[morph[0]] if (x.morph_features.issubset(morph[1])
+                                                                  and x.exponent.side == 'p'
                                                                   and pcontext[0] in [y[0] for y in  x.context.keys()])]
-                choiceset = [x for x in sorted(choiceset, key= lambda self: -len(self.morph_features))]
-                choicep = [(float(sum([y.context[x] for x in self.context.keys() if x[0] == scontext[0]]))/
-                            float(len([y.context[x] for x in self.context.keys() if x[0] == scontext[0]])))
-                                for y in choiceset]
-                choice = choiceset[weighted(choicep)]
-            icontext = pcontext
-            pcontext = morph
-            if choice.rule != []:
-                rule = choice.rule
-                phon = applyProcess(rule,phon)
-            phon = choice.exponent.phon + phon
-        items.append(vocab_item(vocab_item((morph[0],choice.morph_features),
+                    if choiceset != []:
+                        choiceset = sorted(choiceset, key= lambda self: -len(self.morph_features))
+                        if len(choiceset) == 1:
+                            if choiceset[0].context[pcontext] != 0.0:
+                                choice = choiceset[0]
+                            else:
+                                return False
+                        else:
+                            choicep = [(float(sum([y.context[x] for x in y.context.keys() if x[0] == pcontext[0]]))/
+                                    float(len([y.context[x] for x in y.context.keys() if x[0] == pcontext[0]])))
+                                    for y in choiceset]
+                            choice = choiceset[weighted(choicep)]
+                    else:
+                        return False
+                icontext = pcontext
+                pcontext = morph
+                if choice.rule not in [[],[[]]]:
+                    rule = choice.rule
+                    for process in rule:
+                        print process
+                        phon = applyProcess(process,phon)
+                phon = choice.exponent.phon + phon
+            items.append(vocab_item((morph[0],choice.morph_features),
                         choice.exponent.phon,choice.exponent.side,
-                        icontext,rule)))
+                        icontext,rule))
         if phon == word.phonology:
             model = updateRootConfidence(model,items[0][0],items[0][1])
             pcontext = items[0][0]
@@ -512,6 +556,7 @@ def testVocab(model, word_list, printout):
     if printout:
         print 'Words: ' + str([''.join(IPA[c] for c in word.phonology) for word in word_list])
         print 'Results: ' + str(test)
+        raw_input()
     return all(test)
 
 def findPandS(word,subset):
@@ -536,8 +581,36 @@ def findPandS(word,subset):
 
 def cleanModel(model):
     for rkey in model.roots:
-        print model.roots[rkey]
-        raw_input()
+        newroots = []
+        for root in model.roots[rkey]:
+            newforms = [x[0] for x in newroots]
+            if root[0] in newforms:
+                i = newforms.index(root[0])
+                newroots[i] = [newroots[i][0],newroots[i][1]+root[1]]
+            else:
+                newroots.append(root)
+        model.roots[rkey] = newroots
+    for vkey in model.vocab:
+        newvocab = []
+        for vitem in model.vocab[vkey]:
+            newforms = [(x.morph_features,x.exponent.phon,x.exponent.side,x.rule) for x in newvocab]
+            curitem = (vitem.morph_features,vitem.exponent.phon,vitem.exponent.side,vitem.rule)
+            if curitem in newforms:
+                i = newforms.index(curitem)
+                newcontext = {}
+                for context in newvocab[i].context:
+                    if newvocab[i].context[context] != 0.0:
+                        newcontext[context] = newvocab[i].context[context]
+                for context in vitem.context:
+                    if context in newcontext.keys():
+                        newcontext[context] = newcontext[context] + vitem.context[context]
+                    else:
+                        newcontext[context] = vitem.context[context]
+                newitem = vocab_item(vitem.morph_features,vitem.exponent.phon,vitem.exponent.side,newcontext,vitem.rule)
+                newvocab[i] = newitem
+            else:
+                newvocab.append(vitem)
+        model.vocab[vkey] = newvocab
     return model
     
 def debugOutput(model,word):
@@ -563,10 +636,10 @@ def nothingKnown(model,phon,root,morphs):
             morph = line[i]
             if morph[0] != 'ROOT':
                 if side == 'p':
-                    newitem = vocab_item(morph,[],'p',line[i+1],[])
+                    newitem = vocab_item(morph,[],'p',line[i+1],[[]])
                     updateItemConfidence(model,newitem)
                 else:
-                    newitem = vocab_item(morph,[],'s',line[i-1],[])
+                    newitem = vocab_item(morph,[],'s',line[i-1],[[]])
                     updateItemConfidence(model,newitem)
             else:
                 side = 's'
@@ -975,8 +1048,8 @@ def rootKnown(model,phon,root,morphs):
                                                         cur_morph,cur_analysis.scon,
                                                         cur_analysis.pitems + [newitem]),
                                         rmorphs[0],cur_side,rmorphs[1:])
-                    else:
-                        output = output + generatePossibleAnalyses(model,
+                        else:
+                            output = output + generatePossibleAnalyses(model,
                                         possible_analysis(cur_analysis.line,cur_analysis.p*p[-1],
                                                         cur_analysis.stem+phonopt[0],
                                                         cur_analysis.stem+phonopt[0],
@@ -1145,7 +1218,7 @@ def rootKnown(model,phon,root,morphs):
 def learnVocab(word_list, settings, debug = False, iterate = False, output = True):
     model = Model(settings)
     iteration = 0
-    while not testVocab(model,word_list,(iterate and ((output) or (iteration > 2)))):
+    while not testVocab(model,word_list,(iterate and (output) and (iteration % 20 == 0))):
         if not debug:
             newlist = []
             for i in range(model.settings.samplesize):
@@ -1172,4 +1245,5 @@ def learnVocab(word_list, settings, debug = False, iterate = False, output = Tru
         model = cleanModel(model)
         if iterate and ((model) or (iteration > 2)):
             iterateOutput(model,word_list,iteration)
+        iteration += 1
     return model
