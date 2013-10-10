@@ -21,4 +21,4 @@ if __name__ == '__main__':
     word(r'yelin',{'ROOT':'YELLOW','OTHER':[('CASE',frozenset(['OBLIQUE'])),('PHI',frozenset(['NEUTER','PL']))]})
     ]
     settings = Settings(2, 2, 5, 3, 2, 1, 1, 2)
-    learnVocab(word_list,settings,debug=True)
+    learnVocab(word_list,settings,iterate=True)

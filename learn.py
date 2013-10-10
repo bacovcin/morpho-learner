@@ -57,17 +57,18 @@ class Model(object):
         self.vocab = {}
         self.settings = settings
 
-def iterateOutput(model,word_list):
+def iterateOutput(model,word_list,iteration):
     print 'Iteration #' + str(iteration)
     for root in model.roots.keys():
-        print root + ': ' + ''.join([IPA[c] for c in model.roots[root]])
+        print root + ': ' + ''.join([IPA[c] for x in model.roots[root] for c in x[0]])
         for key in model.vocab.keys():
             print '\n' + key + ':'
             for item in model.vocab[key]:
                 print 'Exponent Phonology: ' + ''.join([IPA[c] for c in item.exponent.phon])
                 print 'Exponent Side: ' + item.exponent.side
                 print 'Context: ' + str(item.context)
-    if iteration > 2:
+                print 'Rule: ' + str(item.rule)
+    if iteration > 0:
         raw_input('To continue press any button...')
     return 
 
@@ -916,6 +917,6 @@ def learnVocab(word_list, settings, debug = False, iterate = False, output = Tru
                     model = rootKnown(model,phon,root,morphs)
         #Clean up and iterate printout
         #model = clean_model(model)
-        #if iterate and ((output) or (iteration > 2)):
-        #    iterate_output(output,word_list)
+        if iterate and ((model) or (iteration > 2)):
+            iterateOutput(model,word_list,iteration)
     return model
