@@ -61,17 +61,24 @@ class Model(object):
 def iterateOutput(model,word_list,iteration):
     print 'Iteration #' + str(iteration)
     for root in model.roots.keys():
-        print root + ': ' + ''.join([IPA[c] for x in model.roots[root] for c in x[0]])
+        print root + ': ' 
+        for form in model.roots[root]:
+            print '\t' + ''.join([IPA[c] for c in form[0]]) + ': ' + str(form[1])
     for key in model.vocab.keys():
         print '\n' + key + ':'
-        for item in model.vocab[key]:
+	items = model.vocab[key]
+        items = sorted(items, key = lambda self: -len(self.morph_features))
+        items = sorted(items, key = lambda self: self.exponent.side)
+        for item in items:
             print 'Morphological Features: ' + str(item.morph_features)
-            print 'Exponent Phonology: ' + ''.join([IPA[c] for c in item.exponent.phon])
-            print 'Exponent Side: ' + item.exponent.side
-            print 'Context: ' + str(item.context)
-            print 'Rule: ' + str(item.rule)
+            print '\tExponent Phonology: ' + ''.join([IPA[c] for c in item.exponent.phon])
+            print '\tExponent Side: ' + item.exponent.side
+            print '\tContexts: ' 
+            for context in sorted(item.context.keys()):
+   	          print '\t\t' + str(context) + ': ' + str(item.context[context])
+            print '\tRule: ' + str(item.rule)
     print iteration
-    if iteration % 20 == 0:
+    if iteration % 1 == 0:
         raw_input('To continue press any button...')
     return 
 
@@ -269,7 +276,7 @@ def updateRootConfidence(model,root,phon):
                     model.roots[root] = [model.roots[root][i]]
                     break
                 else:
-                    model.roots[root][i][1] = model.roots[root][i][1] + 1.0
+                    model.roots[root][i][1] = model.roots[root][i][1] + amount
                     rvalue = model.roots[root][i][1]
                     for j in range(len(model.roots[root])):
                         if j != i:
@@ -280,24 +287,44 @@ def updateRootConfidence(model,root,phon):
 
 def updateItemConfidence(model,item):
     def addNewItem(model,item):
-        competitors = [x for x in model.vocab[rootmorph] 
+        competitors = sorted([x for x in model.vocab[rootmorph] 
                                 if (x.exponent.side == item.exponent.side and
                                 item.context in x.context.keys() and
-                                x.morph_features == item.morph_features[1])]
+                                item.morph_features[1].issubset(x.morph_features))],
+				key = lambda self:len(self.morph_features))
         if len(competitors) == 0:
             newitem = vocab_item(item.morph_features[1],phon,item.exponent.side,
                                          {item.context:1.0},item.rule)
             model.vocab[rootmorph].append(newitem)
         else:     
-            total = float(sum([x.context[item.context] for x in competitors]))
-            if total != 0:
-                newitem = vocab_item(item.morph_features[1],phon,item.exponent.side,
+            newcomp = []
+            for i in range(len(competitors[-1].morph_features)):
+                newcomp.append([])
+            for x in competitors:
+                newcomp[len(x.morph_features)-1].append(x)
+	    for i in range(len(newcomp)):
+		competitors = newcomp[i]
+                if len(competitors) > 0:
+   		    if i+1 == len(item.morph_features):
+                        total = float(sum([x.context[item.context] for x in competitors]))
+                        if total != 0:
+                            newitem = vocab_item(item.morph_features[1],phon,item.exponent.side,
                                          {item.context:float(total)/
                                         (float(len(competitors))+1)},item.rule)
-                model.vocab[rootmorph].append(newitem)
-                newtotal = total - float(total)/(float(len(competitors))+1)
-                for comp in competitors:
-                    comp.context[item.context] = (comp.context[item.context]/float(total))*newtotal
+                            model.vocab[rootmorph].append(newitem)
+                            newtotal = total - float(total)/(float(len(competitors))+1)
+                            for comp in competitors:
+                                comp.context[item.context] = (comp.context[item.context]/float(total))*newtotal
+   		    else:
+		        total = float(sum([x.context[item.context] for x in competitors]))
+  		        if total != 0:
+                            newtotal = total - float(total)/(float(len(competitors))+1)
+                            for comp in competitors:
+                                comp.context[item.context] = (comp.context[item.context]/float(total))*newtotal
+                else:
+                    if i+1 == len(item.morph_features):
+                        newitem = vocab_item(item.morph_features[1],phon,item.exponent.side,
+                                         {item.context:1.0},item.rule)
         return model
     phon = item.exponent.phon
     rootmorph = item.morph_features[0]
@@ -360,38 +387,63 @@ def updateItemConfidence(model,item):
             else:
                 model = addNewItem(model,item)
                 return model
-            competitors = [x for x in model.vocab[rootmorph] if (x.exponent.side == item.exponent.side and
-                                                                 item.context in x.context.keys()) and
-                                                                 contendor.morph_features.issubset(x.morph_features) and
-                                                                x.morph_features - item.morph_features[1] == []]
             if contendor.morph_features == contendor.morph_features.intersection(item.morph_features[1]):
-                competitors = [x for x in model.vocab[rootmorph] if (x.exponent.side == item.exponent.side and
+                competitors = sorted([x for x in model.vocab[rootmorph] if (x.exponent.side == item.exponent.side and
                                                                      item.context in x.context.keys()) and
                                                                      contendor.morph_features.issubset(x.morph_features) and
-                                                                     x.morph_features - item.morph_features[1] == []]
-                total = float(sum([x.context[item.context] for x in competitors]))
-                if item.context in contendor.context.keys():
-                    amount = uniform(0.03,0.07)
-                    if contendor.context[item.context] + amount > 1.0:
-                        contendor.context[item.context] = 1.0
-                        for competitor in competitors:
-                            del(competitor.context[item.context])
-                    else:
-                        contendor.context[item.context] = contendor.context[item.context] + amount
-                        newtotal = total - contendor.context[item.context]
-                        for comp in competitors:
-                            comp.context[item.context] = (comp.context[item.context]/total)*newtotal
+                                                                     x.morph_features - item.morph_features[1] == []],
+								     key = lambda self: len(self.morph_features))
+                if len(competitors) > 0:
+                    newcomp = []
+                    for i in range(len(competitors[-1].morph_features)):
+                        newcomp.append([])
+                    for x in competitors:
+                        newcomp[len(x.morph_features)-1].append(x)
+   		    amount = uniform(0.03,0.07)
+                    newamount = amount + contendor.context[item.context]
+                    for i in range(len(newcomp)):
+			competitors = newcomp[i]
+                        if len(competitors) > 0:
+       	                    total = float(sum([x.context[item.context] for x in competitors]))
+                            if len(competitors[0].morph_features) == len(item.morph_features):
+                                if item.context in contendor.context.keys():
+                                    if newamount > 1.0:
+                                        contendor.context[item.context] = 1.0
+                                        for competitor in competitors:
+                                            del(competitor.context[item.context])
+                                    else:
+                                        contendor.context[item.context] = newamount
+                                        newtotal = total - newamount
+                                        for comp in competitors:
+                                            comp.context[item.context] = (comp.context[item.context]/total)*newtotal
+                                else:
+                                    if len(competitors) > 0:
+                                        contendor.context[item.context] = total/(float(len(competitors))+1)
+                                        newtotal = total - total/(float(len(competitors))+1)
+                                        for comp in competitors:
+                                            comp.context[item.context] = (comp.context[item.context]/total)*newtotal
+                                    else:
+                                        contendor.context[item.context] = 1.0
+                            else:
+                                if item.context in contendor.context.keys():
+                                    if total-amount<0.0:
+                                        for competitor in competitors:
+                                            del(competitor.context[item.context])
+                                    else:
+                                        newtotal = total - amount
+                                        for comp in competitors:
+                                            comp.context[item.context] = (comp.context[item.context]/total)*newtotal
+                                else:
+                                    newtotal = total - total/(float(len(competitors))+1)
+                                    for comp in competitors:
+                                        comp.context[item.context] = (comp.context[item.context]/total)*newtotal
+                        else:
+                            if i+1 == len(item.morph_features):
+                                contendor.context[item.context] = 1.0   
                 else:
-                    if len(competitors) > 0:
-                        contendor.context[item.context] = total/(float(len(competitors))+1)
-                        newtotal = total - contendor.context[item.context]
-                        for comp in competitors:
-                            comp.context[item.context] = (comp.context[item.context]/total)*newtotal
-                    else:
-                         contendor.context[item.context] = 1.0
+                    contendor.context[item.context] = 1.0         
             else:
                 newmf = contendor.morph_features.intersection(item.morph_features[1])
-                total = float(sum([x.context[item.context] for x in competitors]))
                 newitem = vocab_item((rootmorph,newmf),phon,
                         item.exponent.side,item.context,
                         item.rule)
@@ -586,7 +638,11 @@ def cleanModel(model):
             newforms = [x[0] for x in newroots]
             if root[0] in newforms:
                 i = newforms.index(root[0])
-                newroots[i] = [newroots[i][0],newroots[i][1]+root[1]]
+		if newroots[i][1]+root[1] <1.0:
+                    newroots[i] = [newroots[i][0],newroots[i][1]+root[1]]
+		else:
+                    newroots = [[newroots[i][0],1.0]]
+                    break
             else:
                 newroots.append(root)
         model.roots[rkey] = newroots
@@ -594,6 +650,8 @@ def cleanModel(model):
         newvocab = []
         for vitem in model.vocab[vkey]:
             newforms = [(x.morph_features,x.exponent.phon,x.exponent.side,x.rule) for x in newvocab]
+            if vitem.rule == []:
+                vitem.rule = [[]]
             curitem = (vitem.morph_features,vitem.exponent.phon,vitem.exponent.side,vitem.rule)
             if curitem in newforms:
                 i = newforms.index(curitem)
@@ -604,6 +662,8 @@ def cleanModel(model):
                 for context in vitem.context:
                     if context in newcontext.keys():
                         newcontext[context] = newcontext[context] + vitem.context[context]
+                        if newcontext[context] > 1.0:
+                            newcontext[context] = 1.0
                     else:
                         newcontext[context] = vitem.context[context]
                 newitem = vocab_item(vitem.morph_features,vitem.exponent.phon,vitem.exponent.side,newcontext,vitem.rule)
@@ -669,7 +729,7 @@ def rootUnknown(model,phon,root,morphs):
             if cur_side == 'p':
                 items = [x for x in cur_items if x.exponent.phon == cur_analysis.rphon[:len(x.exponent.phon)]]
                 if items == []:
-                    newitem = vocab_item(cur_morph,[],cur_side,cur_analysis.con,[])
+                    newitem = vocab_item(cur_morph,[],cur_side,cur_analysis.con,[[]])
                     output = [possible_analysis(cur_analysis.line,cur_analysis.p*p,
                                             cur_analysis.rphon,
                                             cur_analysis.con,
@@ -684,7 +744,7 @@ def rootUnknown(model,phon,root,morphs):
                             p = float(sum(values))/float(len(values))
                         else:
                             p = 1.0/float(len(cur_items))
-                    newitem = vocab_item((cur_morph[0],item.morph_features),item.exponent.phon,cur_side,cur_analysis.con,[])
+                    newitem = vocab_item((cur_morph[0],item.morph_features),item.exponent.phon,cur_side,cur_analysis.con,[[]])
                     newphon = cur_analysis.rphon[len(item.exponent.phon):]
                     output = [possible_analysis(cur_analysis.line,cur_analysis.p*p,
                                             newphon,
@@ -693,7 +753,7 @@ def rootUnknown(model,phon,root,morphs):
             else:
                 items = [x for x in cur_items if ((x.exponent.phon == cur_analysis.rphon[len(x.exponent.phon)*-1:]) or (x.exponent.phon == []))]
                 if items == []:
-                    newitem = vocab_item(cur_morph,[],cur_side,cur_analysis.con,[])
+                    newitem = vocab_item(cur_morph,[],cur_side,cur_analysis.con,[[]])
                     output = [possible_analysis(cur_analysis.line,cur_analysis.p*p,
                                             cur_analysis.rphon,
                                             cur_analysis.con,
@@ -709,7 +769,7 @@ def rootUnknown(model,phon,root,morphs):
                             p = float(sum(values))/float(len(values))
                         else:
                             p = 1.0/float(len(cur_items))
-                    newitem = vocab_item(cur_morph,[],cur_side,cur_analysis.con,[])
+                    newitem = vocab_item(cur_morph,[],cur_side,cur_analysis.con,[[]])
                     newphon = cur_analysis.rphon[:len(x.exponent.phon)*-1]
                     output = [possible_analysis(cur_analysis.line,cur_analysis.p*p,
                                             newphon,
@@ -719,9 +779,9 @@ def rootUnknown(model,phon,root,morphs):
             if cur_items == []:
                 p = [.7]
                 if cur_side == 'p':
-                    item = vocab_item(cur_morph,[],'p',cur_analysis.con,[])
+                    item = vocab_item(cur_morph,[],'p',cur_analysis.con,[[]])
                 else:
-                    item = vocab_item(cur_morph,[],'s',cur_analysis.con,[])
+                    item = vocab_item(cur_morph,[],'s',cur_analysis.con,[[]])
                 if item.exponent.phon == []:
                     p[-1] = p[-1]*0.7
                 if cur_side == 'p':
@@ -782,9 +842,9 @@ def rootUnknown(model,phon,root,morphs):
                 else:
                     p = [.7]
                     if cur_side == 'p':
-                        item = vocab_item(cur_morph,[],'p',cur_analysis.con,[])
+                        item = vocab_item(cur_morph,[],'p',cur_analysis.con,[[]])
                     else:
-                        item = vocab_item(cur_morph,[],'s',cur_analysis.con,[])
+                        item = vocab_item(cur_morph,[],'s',cur_analysis.con,[[]])
                     if item.exponent.phon == []:
                         p[-1] = p[-1]*0.7
                     if cur_side == 'p':
@@ -1242,7 +1302,7 @@ def learnVocab(word_list, settings, debug = False, iterate = False, output = Tru
                 else:
                     model = rootKnown(model,phon,root,morphs)
         #Clean up and iterate printout
-        model = cleanModel(model)
+        #model = cleanModel(model)
         if iterate and ((model) or (iteration > 2)):
             iterateOutput(model,word_list,iteration)
         iteration += 1
