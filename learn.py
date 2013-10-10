@@ -534,8 +534,11 @@ def findPandS(word,subset):
             s.append(word[i])
     return [p,s]
 
-def cleanModel(vocab):
-    return vocab
+def cleanModel(model):
+    for rkey in model.roots:
+        print model.roots[rkey]
+        raw_input()
+    return model
     
 def debugOutput(model,word):
     return
@@ -570,7 +573,257 @@ def nothingKnown(model,phon,root,morphs):
     return model
 
 def rootUnknown(model,phon,root,morphs):
+    class linear(object):
+        def __init__(self,line,p):
+            self.line = line
+            self.p = p
+    class possible_analysis(object):
+        def __init__(self,line,p,rphon,con,pitems):
+            self.line = line
+            self.p = p
+            self.rphon = rphon
+            self.con = con
+            self.pitems = pitems
+    def generatePossibleAnalyses(model,cur_analysis,cur_morph,cur_side,rmorphs):
+        output = []
+        if cur_morph[0] in model.vocab.keys():
+            cur_items = [x for x in model.vocab[cur_morph[0]] if (x.morph_features.issubset(cur_morph[1])
+                                                                and x.exponent.side == cur_side)]
+        else:
+            cur_items = []
+        if len(rmorphs) == 1:
+            p = 0.5
+            if cur_side == 'p':
+                items = [x for x in cur_items if x.exponent.phon == cur_analysis.rphon[:len(x.exponent.phon)]]
+                if items == []:
+                    newitem = vocab_item(cur_morph,[],cur_side,cur_analysis.con,[])
+                    output = [possible_analysis(cur_analysis.line,cur_analysis.p*p,
+                                            cur_analysis.rphon,
+                                            cur_analysis.con,
+                                            cur_analysis.pitems + [newitem])]
+                else:
+                    item = sorted(items,key=lambda self:len(self.morph_features))[0]
+                    if item.context.keys() != []:
+                        if cur_analysis.con in item.context.keys():
+                            p = item.context[cur_analysis.con]
+                        elif cur_analysis.con[0] in [x[0] for x in item.context.keys()]:
+                            values = [item.context[x] for x in item.context.keys() if x[0] == cur_analysis.con[0]]
+                            p = float(sum(values))/float(len(values))
+                        else:
+                            p = 1.0/float(len(cur_items))
+                    newitem = vocab_item((cur_morph[0],item.morph_features),item.exponent.phon,cur_side,cur_analysis.con,[])
+                    newphon = cur_analysis.rphon[len(item.exponent.phon):]
+                    output = [possible_analysis(cur_analysis.line,cur_analysis.p*p,
+                                            newphon,
+                                            cur_analysis.con,
+                                            cur_analysis.pitems + [newitem])]
+            else:
+                items = [x for x in cur_items if ((x.exponent.phon == cur_analysis.rphon[len(x.exponent.phon)*-1:]) or (x.exponent.phon == []))]
+                if items == []:
+                    newitem = vocab_item(cur_morph,[],cur_side,cur_analysis.con,[])
+                    output = [possible_analysis(cur_analysis.line,cur_analysis.p*p,
+                                            cur_analysis.rphon,
+                                            cur_analysis.con,
+                                            cur_analysis.pitems + [newitem])]
+                else:
+                    item = sorted(items,key=lambda self:len(self.morph_features))[0]
+                    if item.context.keys() != []:
+                        con = cur_analysis.scon
+                        if con in item.context.keys():
+                            p = item.context[con]
+                        elif con[0] in [x[0] for x in item.context.keys()]:
+                            values = [item.context[x] for x in item.context.keys() if x[0] == con[0]]
+                            p = float(sum(values))/float(len(values))
+                        else:
+                            p = 1.0/float(len(cur_items))
+                    newitem = vocab_item(cur_morph,[],cur_side,cur_analysis.con,[])
+                    newphon = cur_analysis.rphon[:len(x.exponent.phon)*-1]
+                    output = [possible_analysis(cur_analysis.line,cur_analysis.p*p,
+                                            newphon,
+                                            cur_analysis.con,
+                                            cur_analysis.pitems + [newitem])]
+        else:
+            if cur_items == []:
+                p = [.7]
+                if cur_side == 'p':
+                    item = vocab_item(cur_morph,[],'p',cur_analysis.con,[])
+                else:
+                    item = vocab_item(cur_morph,[],'s',cur_analysis.con,[])
+                if item.exponent.phon == []:
+                    p[-1] = p[-1]*0.7
+                if cur_side == 'p':
+                    output = output + generatePossibleAnalyses(model,
+                                possible_analysis(cur_analysis.line,cur_analysis.p*p[-1],
+                                                    cur_analysis.rphon,
+                                                    rmorphs[1],
+                                                    cur_analysis.pitems + [item]),
+                                    rmorphs[0],cur_side,rmorphs[1:])
+                else:
+                    output = output + generatePossibleAnalyses(model,
+                                    possible_analysis(cur_analysis.line,cur_analysis.p*p[-1],
+                                                    cur_analysis.rphon,
+                                                    rmorphs[-1],
+                                                    cur_analysis.pitems + [item]),
+                                    rmorphs[-1],cur_side,rmorphs[:-1])
+            else:
+                p = []
+                for item in cur_items:
+                    if cur_side == 'p':
+                        if item.exponent.phon != cur_analysis.rphon[:len(item.exponent.phon)]:
+                            continue
+                    else:
+                        if item.exponent.phon != cur_analysis.rphon[-len(item.exponent.phon):] or len(item.exponent.phon) == 0:
+                            continue
+                    con = cur_analysis.con
+                    if con in item.context.keys():
+                        p.append(item.context[con])
+                    elif con[0] in [x[0] for x in item.context.keys()]:
+                        values = [item.context[x] for x in item.context.keys() if x[0] == con[0]]
+                        p.append(float(sum(values))/float(len(values)))
+                    else:
+                        p.append(1.0/float(len(cur_items)))
+                    if item.exponent.phon == []:
+                        p[-1] = p[-1]*0.5
+                    if cur_side == 'p':
+                        newitem = vocab_item((cur_morph[0],item.morph_features),item.exponent.phon,'p',cur_analysis.con,[item.rule])
+                        newphon = cur_analysis.rphon[len(item.exponent.phon):]
+                        for process in item.rule:
+                            newphon = applyProcess(process,newphon,True)
+                        output = output + generatePossibleAnalyses(model,
+                                possible_analysis(cur_analysis.line,cur_analysis.p*p[-1],
+                                                    newphon,
+                                                    rmorphs[1],
+                                                    cur_analysis.pitems + [newitem]),
+                                    rmorphs[0],cur_side,rmorphs[1:])
+                    else:
+                        newitem = vocab_item((cur_morph[0],item.morph_features),item.exponent.phon,'s',cur_analysis.con,[item.rule])
+                        newphon = cur_analysis.rphon[:-len(item.exponent.phon)]
+                        for process in item.rule:
+                            newphon = applyProcess(process,newphon,True)
+                        output = output + generatePossibleAnalyses(model,
+                                    possible_analysis(cur_analysis.line,cur_analysis.p*p[-1],
+                                                    newphon,
+                                                    rmorphs[-1],
+                                                    cur_analysis.pitems + [newitem]),
+                                    rmorphs[-1],cur_side,rmorphs[:-1])
+                else:
+                    p = [.7]
+                    if cur_side == 'p':
+                        item = vocab_item(cur_morph,[],'p',cur_analysis.con,[])
+                    else:
+                        item = vocab_item(cur_morph,[],'s',cur_analysis.con,[])
+                    if item.exponent.phon == []:
+                        p[-1] = p[-1]*0.7
+                    if cur_side == 'p':
+                        output = output + generatePossibleAnalyses(model,
+                                possible_analysis(cur_analysis.line,cur_analysis.p*p[-1],
+                                                    cur_analysis.rphon,
+                                                    rmorphs[1],
+                                                    cur_analysis.pitems + [item]),
+                                    rmorphs[0],cur_side,rmorphs[1:])
+                    else:
+                        output = output + generatePossibleAnalyses(model,
+                                    possible_analysis(cur_analysis.line,cur_analysis.p*p[-1],
+                                                    cur_analysis.rphon,
+                                                    rmorphs[-1],
+                                                    cur_analysis.pitems + [item]),
+                                    rmorphs[-1],cur_side,rmorphs[:-1])
+        return output
+    linearizations = [linear([(('ROOT',root),'r')],1.0)]
+    for morph in morphs:
+        newlinearizations = []
+        for l in linearizations:
+            pcontext = l.line[0][0]
+            scontext = l.line[-1][0]
+            if morph in model.linear.keys():
+                if (pcontext,scontext) in model.linear[morph].keys():
+                    prob = model.linear[morph][(pcontext,scontext)]
+                else:
+                    values = [model.linear[morph][x] for x in model.linear[morph].keys() if (x[0] == pcontext
+                                                    and x[1] == scontext)]
+                    if values == []:
+                        values = [model.linear[morph][x] for x in model.linear[morph].keys() if (x[0][0] == pcontext[0]
+                                                                                         and x[1] == scontext)]
+                    if values == []:
+                        values = [model.linear[morph][x] for x in model.linear[morph].keys() if (x[0] == pcontext
+                                                                                         and x[1][0] == scontext[0])]
+                    if values == []:
+                        values = [model.linear[morph][x] for x in model.linear[morph].keys() if (x[0][0] == pcontext[0]
+                                                                                         and x[1][0] == scontext[0])]
+                    if values == []:
+                        prob = 0.5
+                    else:
+                        prob = float(sum(values))/float(len(values))
+                        model.linear[morph][(pcontext,scontext)] = prob
+            elif morph[0] in [x[0] for x in model.linear.keys()]:
+                values = [model.linear[m][x] for m in model.linear.keys() if m[0] == morph[0]
+                            for x in model.linear[m].keys() if (x[0] == pcontext
+                                                                and x[1] == scontext)]
+                if values == []:
+                    values = [model.linear[m][x] for m in model.linear.keys() if m[0] == morph[0]
+                                                     for x in model.linear[m].keys() if (x[0][0] == pcontext[0]
+                                                                                     and x[1] == scontext)]
+                if values == []:
+                    values = [model.linear[m][x] for m in model.linear.keys() if m[0] == morph[0]
+                                                     for x in model.linear[m].keys() if (x[0] == pcontext
+                                                                                     and x[1][0] == scontext[0])]
+                if values == []:
+                    values = [model.linear[m][x] for m in model.linear.keys() if m[0] == morph[0]
+                                                     for x in model.linear[m].keys() if (x[0][0] == pcontext[0]
+                                                                                     and x[1][0] == scontext[0])]
+                if values == []:
+                    prob = 0.5
+                else:
+                    prob = float(sum(values))/float(len(values))
+                    model.linear[morph]={}
+                    model.linear[morph][(pcontext,scontext)] = prob
+            else:
+                prob = 0.5
+            newlinearizations.append(linear(l.line+[(morph,'s')],l.p*(1.0-prob)))
+            newlinearizations.append(linear([(morph,'p')]+l.line,l.p*prob))
+        linearizations = newlinearizations
+    
+    analyses = []
+    bareanalysis = possible_analysis(l.line,l.p,phon,'',[])
+    for l in linearizations:
+        if l.p == 0.0:
+            continue
+        prefixes = [x[0] for x in l.line if x[1] == 'p'] + [('ROOT',root)]
+        suffixes = [('ROOT',root)] + [x[0] for x in l.line if x[1] == 's']
+        if len(prefixes) > 1:
+            bareanalysis.con = prefixes[1]
+            panal = generatePossibleAnalyses(model,bareanalysis,prefixes[0],'p',prefixes[1:])
+            for pa in panal:
+                if len(suffixes) > 1:
+                    pa.con = suffixes[-2]
+                    sanal = generatePossibleAnalyses(model,pa,suffixes[0],'s',suffixes[1:])
+                    analyses = analyses + sanal
+                else:
+                    analyses = analyses + panal
+        else:
+            if len(suffixes) > 1:
+                bareanalysis.con = suffixes[-2]
+                sanal = generatePossibleAnalyses(model,ra,suffixes[0],'s',suffixes[1:])
+                analyses = analyses + sanal
+            else:
+                analyses = analyses + [bareanalysis]
+    sortedanalyses = sorted(analyses, key=lambda self:-self.p)
+    best = [x for x in sortedanalyses if x.p == sortedanalyses[0].p]
+    for analysis in best:
+        pcon = analysis.line[0]
+        scon = analysis.line[0]
+        for l in analysis.line[1:]:
+            model = updateLinearization(model,l[0],(pcon,scon),l[1])
+            if l[1] == 'p':
+                pcon = l[0]
+            else:
+                scon = l[0]
+        item = analysis.pitems[0]
+        model = updateRootConfidence(model,item[0][1],item[1])
+        for item in analysis.pitems[1:]:
+            model = updateItemConfidence(model,item)
     return model
+
 
 def rootKnown(model,phon,root,morphs):
     class linear(object):
@@ -916,7 +1169,7 @@ def learnVocab(word_list, settings, debug = False, iterate = False, output = Tru
                 else:
                     model = rootKnown(model,phon,root,morphs)
         #Clean up and iterate printout
-        #model = clean_model(model)
+        model = cleanModel(model)
         if iterate and ((model) or (iteration > 2)):
             iterateOutput(model,word_list,iteration)
     return model
