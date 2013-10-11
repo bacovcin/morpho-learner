@@ -81,9 +81,9 @@ def printOutput(model):
             if item.rule != [[]]:
                 print '\tRule:'
                 outputs = interpretrule(item.rule,printout=False)
-                '\t\t' + outputs
+                print '\t\t' + outputs
             else:
-                print 'No Rule'
+                print '\tNo Rule'
     return 
 
 def iterateOutput(model,word_list,iteration):
@@ -110,7 +110,7 @@ def iterateOutput(model,word_list,iteration):
                 print '\t\t' + outputs
             else:
                 print 'No Rule'
-    if iteration % 20 == 0:
+    if iteration % 10 == 0:
         raw_input('To continue press any button...')
     return 
 
@@ -293,6 +293,20 @@ def updateLinearization(model,line,context,side):
                 model.linear[line][context] = model.linear[line][context] - amount
     return model
 
+def decreaseLinearization(model,line,context,side):
+    amount = uniform(0.03,0.07)
+    if side == 'p':
+        if model.linear[line][context] - amount <= 0.0:
+            model.linear[line][context] = 0.0
+        else:
+            model.linear[line][context] = model.linear[line][context] - amount
+    else:
+        if model.linear[line][context] + amount >= 1.0:
+            model.linear[line][context] = 1.0
+        else:
+            model.linear[line][context] = model.linear[line][context] + amount
+    return model
+
 def updateRootConfidence(model,root,phon):
     if phon not in [x[0] for x in model.roots[root]]:
         amount = 1.0/(len(model.roots[root])+1)
@@ -314,8 +328,46 @@ def updateRootConfidence(model,root,phon):
                         if j != i:
                             cvalue = model.roots[root][j][1]
                             model.roots[root][j][1] = ((cvalue/(1.0-rvalue))*
-                                                        (1.0-(rvalue+amount)))
+                                                        (1.0-(rvalue)))
     return model
+
+def decreaseRootConfidence(model,root,phon):
+    amount = uniform(0.03,0.07)
+    for i in range(len(model.roots[root])):
+        if model.roots[root][i][0] == phon:
+            if model.roots[root][i][1] - amount <= 0.0:
+                rvalue = model.roots[root][i][1]
+                for j in range(len(model.roots[root])):
+                    if j != i:
+                        cvalue = model.roots[root][j][1]
+                        model.roots[root][j][1] = (cvalue/(1.0-rvalue))
+                del(model.roots[root][i])
+                model.roots[root] = sorted(model.roots[root],key = lambda self: self[1])
+                q = 0.0
+                for j in range(len(model.roots[root])):
+                    q = q + model.roots[root][j][1]
+                else:
+                    if q < 1.0:
+                        model.roots[root][j][1] = model.roots[root][j][1] + (1.0-q)
+                break
+            else:
+                model.roots[root][i][1] = model.roots[root][i][1] - amount
+                rvalue = model.roots[root][i][1]
+                for j in range(len(model.roots[root])):
+                    if j != i:
+                        cvalue = model.roots[root][j][1]
+                        model.roots[root][j][1] = ((cvalue/(1.0-rvalue))*
+                                                        (1.0-(rvalue)))
+                model.roots[root] = sorted(model.roots[root],key = lambda self: self[1])
+                q = 0.0
+                for j in range(len(model.roots[root])):
+                    q = q + model.roots[root][j][1]
+                else:
+                    if q < 1.0:
+                        model.roots[root][j][1] = model.roots[root][j][1] + (1.0-q)
+                break
+    return model
+
 
 def updateItemConfidence(model,item):
     def addNewItem(model,item):
@@ -445,7 +497,7 @@ def updateItemConfidence(model,item):
                         competitors = newcomp[i]
                         if len(competitors) > 0:
                             total = float(sum([x.context[item.context] for x in competitors]))
-                            if len(competitors[0].morph_features) == len(item.morph_features):
+                            if len(competitors[0].morph_features) == len(item.morph_features[1]):
                                 if item.context in contendor.context.keys():
                                     if newamount > 1.0:
                                         contendor.context[item.context] = 1.0
@@ -459,7 +511,7 @@ def updateItemConfidence(model,item):
                                 else:
                                     if len(competitors) > 0:
                                         contendor.context[item.context] = total/(float(len(competitors))+1)
-                                        newtotal = total - total/(float(len(competitors))+1)
+                                        newtotal = total - (total/(float(len(competitors))+1))
                                         for comp in competitors:
                                             comp.context[item.context] = (comp.context[item.context]/total)*newtotal
                                     else:
@@ -490,6 +542,41 @@ def updateItemConfidence(model,item):
                 model = addNewItem(model,newitem)
     return model
 
+def decreaseItemConfidence(model,item):
+    phon = item.exponent.phon
+    rootmorph = item.morph_features[0]
+    amount = uniform(0.03,0.07)
+    for i in model.vocab[rootmorph]:
+        if (i.morph_features == item.morph_features[1] and 
+            i.exponent == item.exponent and
+            i.rule == item.rule):
+            if model.vocab[rootmorph][i].context[item.context] - amount <= 0.0:
+                rvalue = model.vocab[rootmorph][i].context[item.context]
+                same = [x for x in model.vocab[rootmorph] if (
+                        x != model.vocab[rootmorph][i] and 
+                        item.morph_features[1] == x.morph_features and
+                        item.context in x.context.keys() and
+                        item.exponent.side == x.exponent.side)]
+                samesum = sum([x.context[item.context] for x in same])
+                for newitem in same:
+                    cvalue = newitem.context[item.context]
+                    newitem.context[item.context] = (cvalue/(samesum))
+                del(model.vocab[rootmorph][i].context[item.context])
+                break
+            else:
+                model.vocab[rootmorph][i].context[item.context] = model.vocab[rootmorph][i].context[item.context] - amount
+                rvalue = model.vocab[rootmorph][i].context[item.context]
+                same = [x for x in model.vocab[rootmorph] if (
+                        x != model.vocab[rootmorph][i] and 
+                        item.morph_features[1] == x.morph_features and
+                        item.context in x.context.keys() and
+                        item.exponent.side == x.exponent.side)]
+                samesum = sum([x.context[item.context] for x in same])
+                for newitem in same:
+                    cvalue = newitem.context[item.context]
+                    newitem.context[item.context] = (cvalue/(samesum))*(samesum+amount)
+                break
+    return model
 
 def testWord(model, word, debug=False):
     root = word.morphology['ROOT']
@@ -707,6 +794,12 @@ def testWord(model, word, debug=False):
                 model = updateItemConfidence(model,i)
             return True
         else:
+            model = decreaseRootConfidence(model,items[0][0],items[0][1])
+            pcontext = items[0][0]
+            scontext = items[0][0]
+            for i in items[1:]:
+                model = decreaseLinearization(model,i.morph_features,(pcontext,scontext),i.exponent.side)
+                model = decreaseItemConfidence(model,i)
             return False
     except KeyError:
         return False
@@ -721,7 +814,7 @@ def testVocab(model, word_list, printout=False,percent=False):
     if percent:
         print 'Words: ' + str([''.join(IPA[c] for c in word.phonology) for word in word_list])
         print 'Results: ' + str(test)
-        print '% corrent: ' + str(float(len([x for x in test if x]))/float(len(test)))
+        print 'Corrent: %3.3f' % (100*float(len([x for x in test if x]))/float(len(test)))
     return all(test)
 
 def findPandS(word,subset):
@@ -1096,7 +1189,7 @@ def rootKnown(model,phon,root,morphs):
             cur_items = []
         if len(rmorphs) == 0:
             rules = createRuleSpace(generateProcesses(cur_analysis.rootstem,cur_analysis.stem))
-            p = 0.5
+            p = 1.0
             if cur_side == 'p':
                 items = [x for x in cur_items if x.exponent.phon == cur_analysis.pphon]
                 if items == []:
@@ -1391,13 +1484,13 @@ def rootKnown(model,phon,root,morphs):
 def learnVocab(word_list, settings, debug = False, iterate = False, output = True):
     model = Model(settings)
     iteration = 0
-    while not testVocab(model,word_list,(iterate and (output) and (iteration % 20 == 0))):
+    while not testVocab(model,word_list,printout = (iterate and (output) and (iteration % 10 == 0))):
         if not debug:
             newlist = []
             for i in range(model.settings.samplesize):
-                newlist.append(word_list[randint(0,len(word_list)-1)])
+                newlist.append(copy.deepcopy(word_list[randint(0,len(word_list)-1)]))
         else:
-            newlist = word_list
+            newlist = copy.deepcopy(word_list)
         if iterate and ((output) or (iteration > 2)):
             print 'Word list: ' + str([''.join(IPA[c] for c in word.phonology) for word in newlist])
         for word in newlist:
@@ -1416,13 +1509,15 @@ def learnVocab(word_list, settings, debug = False, iterate = False, output = Tru
                     model = rootKnown(model,phon,root,morphs)
         #Clean up and iterate printout
         model = cleanModel(model)
-        if iterate and ((model) or (iteration > 2)):
+        if (iterate and ((output) or (iteration > 2))):
             iterateOutput(model,word_list,iteration)
         else:
             print 'Iteration #: ' + str(iteration)
             testVocab(model,word_list,percent=True)
         iteration += 1
     if output:
+        model = cleanModel(model)
         printOutput(model)
     else:
+        model = cleanModel(model)
         return model
