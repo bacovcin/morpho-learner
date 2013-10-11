@@ -47,7 +47,8 @@ class MPrule:
         else:
             return False
                 
-def interpretrule(ruleset):
+def interpretrule(ruleset,printout=True):
+    output = []
     for i, rule in enumerate(ruleset):
         humanreadable = str(i) + ") "
         if rule[0] == "ins": humanreadable += "insert "
@@ -74,7 +75,10 @@ def interpretrule(ruleset):
                 humanreadable += "       = first " + str(subset(FeatureRepr(location[3])))
             else: raise TypeError("Location type not abs or rel: ", location)
             humanreadable += " from " + location[2]    + "\n"
-        print humanreadable            
+	if printout:
+            print humanreadable
+        output.append(humanreadable)
+    return humanreadable
         
 def featureDifference(x,y, raw = False, toprint = False, list = False, debug=False,
 		      skel_weight = 1000,root_weight = 100,major_weight = 10,minor_weight = 1):

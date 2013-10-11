@@ -20,5 +20,6 @@ if __name__ == '__main__':
     word(r'yolun',{'ROOT':'YELLOW','OTHER':[('CASE',frozenset(['NOMINATIVE'])),('PHI',frozenset(['NEUTER','PL']))]}),
     word(r'yelin',{'ROOT':'YELLOW','OTHER':[('CASE',frozenset(['OBLIQUE'])),('PHI',frozenset(['NEUTER','PL']))]})
     ]
-    settings = Settings(2, 2, 5, 3, 2, 1, 1, 2)
-    learnVocab(word_list,settings,iterate=True)
+    # (insert, delete, skel, root, major, minor, sub, samplesize)
+    settings = Settings(3, 3, 5, 3, 2, 1, 2, 1)
+    learnVocab(word_list,settings)
