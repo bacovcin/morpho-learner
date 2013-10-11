@@ -398,13 +398,13 @@ def updateItemConfidence(model,item):
                                          {item.context:float(total)/
                                         (float(len(competitors))+float(len(item.rule)))},rule)
                                 model.vocab[rootmorph].append(newitem)
-                            newtotal = total - float(total)/(float(len(competitors))+float(len(item.rule)))
+                            newtotal = total - (float(total)/(float(len(competitors))+float(len(item.rule))))
                             for comp in competitors:
                                 comp.context[item.context] = (comp.context[item.context]/float(total))*newtotal
                     else:
                         total = float(sum([x.context[item.context] for x in competitors]))
                         if total != 0:
-                            newtotal = total - float(total)/(float(len(competitors))+1)
+                            newtotal = total - (float(total)/(float(len(competitors))+1))
                             for comp in competitors:
                                 comp.context[item.context] = (comp.context[item.context]/float(total))*newtotal
                 else:
@@ -414,6 +414,12 @@ def updateItemConfidence(model,item):
                                          {item.context:1.0/len(item.rule)},rule)
                             model.vocab[rootmorph].append(newitem)
         return model
+    newvocab = {}
+    for vkey in model.vocab.keys():
+        newvocab[vkey] = []
+        for newitem in model.vocab[vkey]:
+            newvocab[vkey].append(vocab_item(copy.deepcopy(newitem.morph_features),copy.deepcopy(newitem.exponent.phon),newitem.exponent.side,copy.deepcopy(newitem.context),copy.deepcopy(newitem.rule)))
+    model.vocab = newvocab
     phon = item.exponent.phon
     rootmorph = item.morph_features[0]
     if rootmorph not in model.vocab.keys():
@@ -543,6 +549,12 @@ def updateItemConfidence(model,item):
     return model
 
 def decreaseItemConfidence(model,item):
+    newvocab = {}
+    for vkey in model.vocab.keys():
+        newvocab[vkey] = []
+        for newitem in model.vocab[vkey]:
+            newvocab[vkey].append(vocab_item(copy.deepcopy(newitem.morph_features),copy.deepcopy(newitem.exponent.phon),newitem.exponent.side,copy.deepcopy(newitem.context),copy.deepcopy(newitem.rule)))
+    model.vocab = newvocab
     phon = item.exponent.phon
     rootmorph = item.morph_features[0]
     amount = uniform(0.03,0.07)
