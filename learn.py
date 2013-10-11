@@ -15,7 +15,7 @@ def weighted(weights):
         if r <= q:
             return i
     else:
-        return i
+        return 'none'
 
 def product(args):
     pools = map(tuple, args)
@@ -80,8 +80,8 @@ def printOutput(model):
                 print '\t\t' + str(context) + ': ' + str(item.context[context])
             if item.rule != [[]]:
                 print '\tRule:'
-		outputs = interpretrule(item.rule,printout=False)
-		'\t\t' + outputs
+                outputs = interpretrule(item.rule,printout=False)
+                '\t\t' + outputs
             else:
                 print 'No Rule'
     return 
@@ -106,7 +106,7 @@ def iterateOutput(model,word_list,iteration):
                 print '\t\t' + str(context) + ': ' + str(item.context[context])
             if item.rule != [[]]:
                 print '\tRule: '
-		outputs = interpretrule(item.rule,printout=False)
+                outputs = interpretrule(item.rule,printout=False)
                 print '\t\t' + outputs
             else:
                 print 'No Rule'
@@ -496,7 +496,11 @@ def testWord(model, word, debug=False):
     morphs = copy.deepcopy(word.morphology['OTHER'])
     items = []
     try:
-        phon = model.roots[root][weighted([x[1] for x in model.roots[root]])][0]
+        rselection = weighted([x[1] for x in model.roots[root]])
+        if rselection != 'none':
+            phon = model.roots[root][rselection][0]
+        else:
+            phon = sorted(model.roots[root], key = lambda self: self[1])[-1][0]
         items.append((root,phon))
         pcontext = ('ROOT',root)
         scontext = ('ROOT',root)
@@ -560,7 +564,24 @@ def testWord(model, word, debug=False):
                     else:
                         return False
                 elif choiceset != []:
-                    choice = choiceset[weighted(x.context[scontext] for x in choiceset)]
+                    cset = []
+                    for i in range(len(choiceset[0].morph_features)):
+                        cset.append([])
+                    for choice in choiceset:
+                        cset[len(choice.morph_features)-1].append(choice)
+                    for i in range(len(cset)-1,-1,-1):
+                        choiceset = cset[i]
+                        if choiceset != []:
+                            p = [x.context[scontext] for x in choiceset]
+                            selection = weighted(p)
+                            if selection != 'none':
+                                choice = choiceset[selection]
+                                break
+                    else:
+                        for choiceset in cset:
+                            if choiceset != []:
+                                choice = sorted(choiceset, key = lambda self: -self.context[scontext])[0]
+                                break
                 else:
                     choiceset = [x for x in model.vocab[morph[0]] if (x.morph_features.issubset(morph[1])
                                                                   and x.exponent.side == 's'
@@ -573,10 +594,27 @@ def testWord(model, word, debug=False):
                             else:
                                 return False
                         else:
-                            choicep = [(float(sum([y.context[x] for x in y.context.keys() if x[0] == scontext[0]]))/
-                                float(len([y.context[x] for x in y.context.keys() if x[0] == scontext[0]])))
-                                for y in choiceset]
-                            choice = choiceset[weighted(choicep)]
+                            cset = []
+                            for i in range(len(choiceset[0].morph_features)):
+                                cset.append([])
+                            for choice in choiceset:
+                                cset[len(choice.morph_features)-1].append(choice)
+                            for i in range(len(cset)-1,-1,-1):
+                                choiceset = cset[i]
+                                if choiceset != []:
+                                    p = [(float(sum([y.context[x] for x in y.context.keys() if x[0] == scontext[0]]))/
+                                        float(len([y.context[x] for x in y.context.keys() if x[0] == scontext[0]])))
+                                        for y in choiceset]
+                                    selection = weighted(p)
+                                    if selection != 'none':
+                                        choice = choiceset[selection]
+                                        break
+                            else:
+                                for choiceset in cset:
+                                    if choiceset != []:
+                                        choice = sorted(choiceset, key = lambda self: -(float(sum([self.context[x] for x in self.context.keys() if x[0] == scontext[0]]))/
+                                                float(len([self.context[x] for x in self.context.keys() if x[0] == scontext[0]])))[0])
+                                        break
                     else:
                         return False
                 icontext = scontext
@@ -597,7 +635,24 @@ def testWord(model, word, debug=False):
                     else:
                         return False
                 elif choiceset != []:
-                    choice = choiceset[weighted(x.context[pcontext] for x in choiceset)]
+                    cset = []
+                    for i in range(len(choiceset[0].morph_features)):
+                        cset.append([])
+                    for choice in choiceset:
+                        cset[len(choice.morph_features)-1].append(choice)
+                    for i in range(len(cset)-1,-1,-1):
+                        choiceset = cset[i]
+                        if choiceset != []:
+                            p = [x.context[pcontext] for x in choiceset]
+                            selection = weighted(p)
+                            if selection != 'none':
+                                choice = choiceset[selection]
+                                break
+                    else:
+                        for choiceset in cset:
+                            if choiceset != []:
+                                choice = sorted(choiceset, key = lambda self: -self.context[pcontext])[0]
+                                break
                 else:
                     choiceset = [x for x in model.vocab[morph[0]] if (x.morph_features.issubset(morph[1])
                                                                   and x.exponent.side == 'p'
@@ -610,10 +665,27 @@ def testWord(model, word, debug=False):
                             else:
                                 return False
                         else:
-                            choicep = [(float(sum([y.context[x] for x in y.context.keys() if x[0] == pcontext[0]]))/
-                                    float(len([y.context[x] for x in y.context.keys() if x[0] == pcontext[0]])))
-                                    for y in choiceset]
-                            choice = choiceset[weighted(choicep)]
+                            cset = []
+                            for i in range(len(choiceset[0].morph_features)):
+                                cset.append([])
+                            for choice in choiceset:
+                                cset[len(choice.morph_features)-1].append(choice)
+                            for i in range(len(cset)-1,-1,-1):
+                                choiceset = cset[i]
+                                if choiceset != []:
+                                    p = [(float(sum([y.context[x] for x in y.context.keys() if x[0] == pcontext[0]]))/
+                                        float(len([y.context[x] for x in y.context.keys() if x[0] == pcontext[0]])))
+                                        for y in choiceset]
+                                    selection = weighted(p)
+                                    if selection != 'none':
+                                        choice = choiceset[selection]
+                                        break
+                            else:
+                                for choiceset in cset:
+                                    if choiceset != []:
+                                        choice = sorted(choiceset, key = lambda self: -(float(sum([self.context[x] for x in self.context.keys() if x[0] == pcontext[0]]))/
+                                                float(len([self.context[x] for x in self.context.keys() if x[0] == pcontext[0]])))[0])
+                                        break
                     else:
                         return False
                 icontext = pcontext
