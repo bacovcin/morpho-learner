@@ -3,7 +3,7 @@
 # @ Kobey Shwayder
 # implementation of TIPA as double dict
 # Feature values taken from Bruce Hayes "Introductory Phonology" 2001
-# if they were in their, otherwise intuited by Kobey
+# if they were in there, otherwise intuited by Kobey
 #######
 
 from Util import *
